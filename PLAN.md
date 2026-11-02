@@ -93,44 +93,44 @@
 - [ ] Cold-start fallback: new medicines with little history utilize average demand of their therapeutic cluster.
 
 ### Phase 4: Data Warehouse & OLAP Engine Upgrade (Step 4)
-- [ ] Dual Schema Implementation:
+- [x] Dual Schema Implementation:
   - Star Schema: `dim_date`, `dim_time_of_day`, `dim_pharmacy` (SCD Type 2), `dim_medicine` (SCD Type 2), `dim_supplier`, `dim_area`, `fact_daily_sales`, `fact_deliveries`, `fact_stockouts`, `fact_inventory_snapshot`.
   - Snowflake Schema: `dim_atc_level1` through `dim_atc_level4`, `dim_locality` $\rightarrow$ `dim_city` $\rightarrow$ `dim_district` $\rightarrow$ `dim_state`.
-- [ ] Incremental ETL Pipeline:
+- [x] Incremental ETL Pipeline:
   - CDC extraction with watermarks.
   - Quality assertions (null checks, range constraints, referential integrity).
   - SCD Type 2 dimension expiration and insertion.
   - `etl_runs` audit log table.
-- [ ] Full OLAP Explorer API:
+- [x] Full OLAP Explorer API:
   - Hierarchies: Time (Year > Quarter > Month > Day) & Geography (Region > District > City > Pharmacy).
   - Multi-measures: units sold, stockouts, days of cover, avg delay, fill rate.
   - Slice, dice, drill-down, roll-up, period-over-period (PoP) percentage changes, top-N rankings, and saved views.
 
 ### Phase 5: Advanced Data Mining Suite (Step 5)
-- [ ] Association Rule Mining (FP-Growth / Apriori) on co-purchased medicines using `sale_baskets` with support, confidence, lift, and conviction metrics.
-- [ ] Outbreak / Epidemic Demand Surge Detection:
+- [x] Association Rule Mining (FP-Growth / Apriori) on co-purchased medicines using `sale_baskets` with support, confidence, lift, and conviction metrics.
+- [x] Outbreak / Epidemic Demand Surge Detection:
   - CUSUM (Cumulative Sum Control Chart) and STL residual anomaly detection per locality/city.
   - Multi-tier alert levels (Watch, Warning, Surge, Outbreak).
-- [ ] Supervised Classification for Shortage Risk (Random Forest / Gradient Boosted Trees) with feature importance rankings.
-- [ ] Unsupervised K-Means Clustering of pharmacies based on transaction velocity, stockout frequency, and reorder patterns.
-- [ ] Supplier Reliability Composite Score ($S_R$).
-- [ ] Model Registry table (`model_registry`) and retraining endpoint (`/analytics/mining/retrain`).
+- [x] Supervised Classification for Shortage Risk (Random Forest / Gradient Boosted Trees) with feature importance rankings.
+- [x] Unsupervised K-Means Clustering of pharmacies based on transaction velocity, stockout frequency, and reorder patterns.
+- [x] Supplier Reliability Composite Score ($S_R$).
+- [x] Model Registry table (`model_registry`) and retraining endpoint (`/analytics/mining/retrain`).
 
 ### Phase 6: Patient Medicine Finder & Realtime Alerts (Step 6)
-- [ ] Interactive Finder API:
+- [x] Interactive Finder API:
   - Geographic search with distance filtering, verified stock freshness, open status, and generic therapeutic alternatives.
-- [ ] Stock confirmation workflow with status tracking (`pending`, `confirmed`, `unavailable`).
-- [ ] Realtime channel hooks (Supabase Realtime) and notification dispatcher stub for SMS/Email (Twilio / Resend) with local sandbox mode.
-- [ ] Restock alert subscription mechanism and pharmacy daily digest generator for at-risk/expiring batches.
+- [x] Stock confirmation workflow with status tracking (`pending`, `confirmed`, `unavailable`).
+- [x] Realtime channel hooks (Supabase Realtime) and notification dispatcher stub for SMS/Email (Twilio / Resend) with local sandbox mode.
+- [x] Restock alert subscription mechanism and pharmacy daily digest generator for at-risk/expiring batches.
 
 ### Phase 7: Responsive Modern Frontend Dashboard (Step 7)
-- [ ] Initialize Vite + React project with Tailwind CSS, Lucide icons, and modern design system.
-- [ ] UI Architecture:
+- [x] Initialize Vite + React project with Tailwind CSS, Lucide icons, and modern design system.
+- [x] UI Architecture:
   - Sidebar navigation with role-based view switching (`pharmacy_admin`, `pharmacy_staff`, `health_official`, `patient`).
   - Dark mode / Light mode toggle.
   - Loading skeletons, empty states, and error boundaries.
   - Accessible forms, high contrast, ARIA labels.
-- [ ] Views & Pages:
+- [x] Views & Pages:
   - **Overview / KPI Dashboard**: Executive metrics, inventory health, risk gauges, sales charts.
   - **Inventory Management**: FEFO batch listing, expiry alerts, manual verification button, barcode/QR mock scan, and bulk CSV/Excel upload with row-level validation.
   - **Shortage Prediction & Safety Stock**: Model forecast cards, MAPE metrics, risk score 0–100 explainability breakdown, reorder recommendations.
@@ -140,18 +140,18 @@
   - **Reports & Exporting**: PDF and Excel report generation for analytics and OLAP cubes.
 
 ### Phase 8: Engineering Quality, Testing & Deployment (Step 8)
-- [ ] ESLint and Prettier configurations.
-- [ ] Pytest suite covering all modules, auth, prediction algorithms, ETL, and data mining.
-- [ ] Vitest / Testing Library tests for key React components.
-- [ ] Structured JSON logging middleware.
-- [ ] Operational `/health` and Prometheus-compatible `/metrics` endpoints.
-- [ ] 12-Month Realistic Synthetic Data Seed Script (20 pharmacies, 50-300 medicines, suppliers, seasonal demand, deliveries, stockouts).
-- [ ] Docker Compose environment (`docker-compose.yml`) + Dockerfile.
-- [ ] Deployment configurations and guides for Render/Railway (API) and Vercel/Netlify (Frontend).
+- [x] ESLint and Prettier configurations.
+- [x] Pytest suite covering all modules, auth, prediction algorithms, ETL, and data mining.
+- [x] Vitest / Testing Library tests for key React components.
+- [x] Structured JSON logging middleware.
+- [x] Operational `/health` and Prometheus-compatible `/metrics` endpoints.
+- [x] 12-Month Realistic Synthetic Data Seed Script (20 pharmacies, 50-300 medicines, suppliers, seasonal demand, deliveries, stockouts).
+- [x] Docker Compose environment (`docker-compose.yml`) + Dockerfile.
+- [x] Deployment configurations and guides for Render/Railway (API) and Vercel/Netlify (Frontend).
 
 ### Phase 9: Documentation, Demonstration & Presentation Assets (Step 9)
-- [ ] Comprehensive `README.md` with system architecture, quickstart, and configuration.
-- [ ] `docs/DATA_WAREHOUSE.md` (completed with Star/Snowflake schemas, ETL, OLAP).
-- [ ] `docs/ARCHITECTURE.md` with end-to-end system and data flow diagrams.
-- [ ] `docs/MODEL_CARD.md` with ML methodologies, metrics, limitations, and ethical considerations.
-- [ ] `docs/DEMO_SCRIPT.md` with step-by-step walkthrough for project evaluation and viva demonstration.
+- [x] Comprehensive `README.md` with system architecture, quickstart, and configuration.
+- [x] `docs/DATA_WAREHOUSE.md` (completed with Star/Snowflake schemas, ETL, OLAP).
+- [x] `docs/ARCHITECTURE.md` with end-to-end system and data flow diagrams.
+- [x] `docs/MODEL_CARD.md` with ML methodologies, metrics, limitations, and ethical considerations.
+- [x] `docs/DEMO_SCRIPT.md` with step-by-step walkthrough for project evaluation and viva demonstration.
