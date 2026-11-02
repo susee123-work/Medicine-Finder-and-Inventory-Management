@@ -1,0 +1,301 @@
+id,name,supplier_id,price,stock_quantity
+1,Ondansetron,17,41.28,98
+2,Clopidogrel Simvastatin,15,870.74,68
+3,Sildenafil,22,19.45,44
+4,Citalopram Omeprazole Duloxetine,1,109.52,99
+5,Lisinopril Fluoxetine,8,1309.41,3
+6,Simvastatin Sitagliptin Tamsulosin,45,6.33,18
+7,Chlorpheniramine Pregabalin,7,50.85,62
+8,Dexamethasone,29,86.14,58
+9,Naproxen Mirtazapine Citalopram,30,804.24,80
+10,Warfarin,42,1425.31,19
+11,Insulin Dexamethasone,32,16.95,89
+12,Carvedilol Topiramate Fluoxetine,36,76.38,33
+13,Duloxetine Sildenafil,11,562.59,78
+14,Codeine Dexamethasone,45,0.90,100
+15,Tamsulosin Glyburide Ibuprofen,33,260.94,61
+16,Buprenorphine,29,340.86,95
+17,Clopidogrel,30,79.20,71
+18,Tramadol Warfarin Venlafaxine,7,1154.24,44
+19,Carvedilol,14,137.57,92
+20,Venlafaxine,12,13.59,2
+21,Naproxen Naltrexone Citalopram,7,875.84,70
+22,Buprenorphine,26,1028.22,1
+23,Chlorpheniramine Glipizide Omeprazole,38,138.88,6
+24,Furosemide Hydrochlorothiazide,18,1109.50,29
+25,Citalopram,20,615.85,29
+26,Codeine,43,416.28,62
+27,Gabapentin,33,113.89,79
+28,Metoprolol Glyburide,31,1221.79,65
+29,Sertraline Lisinopril Metoprolol,1,48.99,98
+30,Furosemide Warfarin Levothyroxine,24,7.75,32
+31,Lisinopril Levetiracetam,44,85.32,84
+32,Furosemide,7,869.09,86
+33,Ketorolac Nitroglycerin,16,23.06,52
+34,Clopidogrel,2,690.73,14
+35,Glipizide Tramadol,33,10.97,9
+36,Esomeprazole Glyburide,34,6.54,25
+37,Hydrocodone Warfarin Carvedilol,21,1.23,61
+38,Codeine Bupropion,49,113.83,50
+39,Chlorpheniramine Pregabalin,7,3.23,52
+40,Clopidogrel,12,201.66,53
+41,Codeine Tadalafil,19,3.99,31
+42,Clopidogrel,46,157.60,69
+43,Chlorpheniramine Ranitidine,23,708.92,10
+44,Atorvastatin Tadalafil Dexamethasone,22,322.14,71
+45,Valproic-acid,21,919.77,49
+46,Omeprazole Metformin,10,843.31,83
+47,Codeine Simvastatin Clopidogrel,15,589.36,87
+48,Ondansetron Glyburide,18,0.52,78
+49,Buprenorphine Gabapentin Famotidine,31,1132.61,18
+50,Amoxicillin Codeine Glipizide,32,239.47,4
+51,Ibuprofen,11,1320.21,74
+52,Dexamethasone Glipizide Ranitidine,24,27.46,29
+53,Topiramate,42,534.53,7
+54,Metformin,37,1301.70,11
+55,Naproxen,36,1029.62,62
+56,Mirtazapine Sertraline Venlafaxine,6,974.53,22
+57,Insulin,8,833.08,0
+58,Sertraline Aspirin,11,527.20,54
+59,Clopidogrel Ranitidine,34,487.21,7
+60,Tadalafil,29,0.50,43
+61,Duloxetine Pregabalin Metformin,49,1474.78,83
+62,Tramadol,20,130.90,25
+63,Glyburide Warfarin,12,0.76,51
+64,Topiramate Lisinopril,34,984.40,67
+65,Lisinopril Tamsulosin,26,367.77,58
+66,Tamsulosin Hydrochlorothiazide Tramadol,4,296.74,44
+67,Buprenorphine Ranitidine,19,1488.11,77
+68,Lisinopril Buprenorphine,38,159.01,32
+69,Tadalafil Atorvastatin,9,316.71,42
+70,Venlafaxine Ondansetron,13,383.72,71
+71,Mirtazapine Gabapentin,43,4.17,54
+72,Metoprolol Gabapentin Aspirin,22,990.48,76
+73,Mirtazapine Metformin,24,226.31,85
+74,Citalopram,7,676.98,81
+75,Furosemide Simvastatin Duloxetine,22,1074.74,36
+76,Fluoxetine Hydrochlorothiazide,7,56.59,93
+77,Levothyroxine Ondansetron,16,109.58,68
+78,Sildenafil Lisinopril,17,15.35,77
+79,Hydrochlorothiazide Simvastatin Atorvastatin,22,694.57,82
+80,Duloxetine Gabapentin Fluoxetine,43,1087.34,63
+81,Insulin,32,90.80,10
+82,Sertraline Metformin,46,306.83,75
+83,Codeine,14,401.43,21
+84,Diltiazem Naproxen,17,538.93,19
+85,Esomeprazole Hydrocodone Warfarin,3,201.92,30
+86,Glipizide Levetiracetam,36,309.57,24
+87,Sildenafil Clopidogrel,28,12.58,34
+88,Metformin Amoxicillin Levetiracetam,41,67.86,34
+89,Carvedilol Prednisone Fluoxetine,37,345.66,11
+90,Ketorolac,26,882.17,46
+91,Omeprazole,7,203.15,88
+92,Diltiazem Aspirin,13,671.14,8
+93,Bupropion Naproxen Sildenafil,47,215.02,91
+94,Rosuvastatin,36,128.70,82
+95,Tadalafil Prednisone Diltiazem,8,1334.17,71
+96,Sildenafil Warfarin,34,275.02,92
+97,Atorvastatin Pregabalin,47,689.96,30
+98,Carvedilol Ketorolac Metformin,27,913.28,50
+99,Alprazolam Esomeprazole,38,560.46,12
+100,Acetaminophen Tadalafil,45,2.27,94
+101,Mirtazapine Chlorpheniramine,13,22.88,77
+102,Famotidine Rosuvastatin,40,488.38,73
+103,Insulin,21,0.69,19
+104,Clopidogrel Naproxen Buprenorphine,23,1384.17,36
+105,Gabapentin Ranitidine,13,22.44,53
+106,Levetiracetam Glyburide Levothyroxine,1,106.71,90
+107,Aspirin,12,867.14,26
+108,Naproxen,19,1236.63,30
+109,Atorvastatin Rosuvastatin Carvedilol,10,432.32,59
+110,Hydrocodone Mirtazapine Hydrochlorothiazide,2,739.71,0
+111,Furosemide Carvedilol Chlorpheniramine,35,1055.60,42
+112,Acetaminophen Tramadol Gabapentin,41,216.37,19
+113,Nitroglycerin Duloxetine Metoprolol,46,1122.98,46
+114,Ondansetron Esomeprazole Losartan,37,36.12,26
+115,Citalopram Duloxetine,39,584.86,43
+116,Lisinopril Ketorolac,48,17.94,5
+117,Warfarin,46,1145.75,29
+118,Buprenorphine Codeine Levothyroxine,8,604.10,41
+119,Famotidine,33,32.57,98
+120,Gabapentin,34,515.36,35
+121,Insulin Valproic-acid,21,458.95,54
+122,Glyburide Tramadol,32,858.30,51
+123,Naltrexone,15,64.32,16
+124,Glyburide Pregabalin,25,1.80,9
+125,Ibuprofen,22,628.08,42
+126,Bupropion Prednisone,34,1224.50,21
+127,Aspirin Metformin,9,323.08,49
+128,Levetiracetam Mirtazapine,4,1036.04,43
+129,Chlorpheniramine,35,158.02,10
+130,Metformin Ketorolac Atorvastatin,27,903.65,33
+131,Sertraline Fluoxetine Glipizide,12,158.86,83
+132,Diltiazem Simvastatin Chlorpheniramine,3,53.96,21
+133,Levothyroxine Hydrochlorothiazide,43,606.17,63
+134,Chlorpheniramine Carvedilol Naproxen,31,905.69,71
+135,Metoprolol Insulin Gabapentin,43,278.50,53
+136,Metformin,45,247.35,68
+137,Gabapentin,1,14.31,79
+138,Dexamethasone Furosemide Tramadol,41,132.76,23
+139,Citalopram Duloxetine,40,324.76,94
+140,Alprazolam Furosemide Aspirin,39,59.66,26
+141,Valproic-acid,35,593.91,97
+142,Ondansetron Citalopram Ketorolac,9,1148.02,91
+143,Sitagliptin Diltiazem,37,34.50,18
+144,Ibuprofen,44,241.45,52
+145,Ranitidine,21,1463.95,3
+146,Tramadol,21,557.27,75
+147,Glipizide Metformin,15,1058.08,20
+148,Topiramate,42,1.96,36
+149,Levetiracetam Duloxetine,4,915.03,50
+150,Levetiracetam Lisinopril,33,3.21,28
+151,Ibuprofen,10,911.35,47
+152,Insulin Clopidogrel Metformin,33,31.17,3
+153,Pregabalin,20,1.00,58
+154,Ranitidine Ibuprofen,50,709.52,87
+155,Venlafaxine Citalopram,12,1129.90,9
+156,Prednisone,16,836.54,80
+157,Ketorolac Diltiazem Glyburide,36,723.73,97
+158,Esomeprazole Simvastatin Ranitidine,5,15.22,8
+159,Acetaminophen,2,96.82,5
+160,Dexamethasone Prednisone,7,408.07,4
+161,Carvedilol,45,63.65,24
+162,Alprazolam Rosuvastatin,37,572.63,28
+163,Metformin Esomeprazole,7,106.06,73
+164,Topiramate Dexamethasone Simvastatin,4,174.90,25
+165,Insulin Metformin,4,819.27,13
+166,Tamsulosin Famotidine,45,1066.61,97
+167,Prednisone,9,992.96,66
+168,Bupropion,33,8.45,76
+169,Simvastatin Fluoxetine Mirtazapine,5,431.17,83
+170,Glipizide,1,23.47,36
+171,Naproxen Tramadol Topiramate,48,1499.64,96
+172,Omeprazole,18,1058.95,19
+173,Gabapentin Valproic-acid,14,897.61,36
+174,Dexamethasone Glyburide Carvedilol,14,858.24,29
+175,Omeprazole Ondansetron Mirtazapine,20,261.10,59
+176,Mirtazapine,12,134.07,76
+177,Ketorolac Mirtazapine Omeprazole,21,1238.43,70
+178,Warfarin Buprenorphine,22,122.02,47
+179,Venlafaxine Bupropion,14,401.86,78
+180,Atorvastatin,19,1.81,18
+181,Citalopram Levothyroxine Insulin,5,18.45,43
+182,Tadalafil Insulin,26,14.29,69
+183,Tramadol,49,649.68,14
+184,Metformin Carvedilol Tramadol,15,475.33,39
+185,Warfarin Amoxicillin Glipizide,48,1444.01,71
+186,Valproic-acid Hydrocodone Ibuprofen,39,50.76,53
+187,Tamsulosin Ondansetron Rosuvastatin,3,184.57,61
+188,Naproxen,17,518.15,47
+189,Lisinopril,20,29.44,85
+190,Gabapentin Rosuvastatin Tamsulosin,6,41.89,61
+191,Bupropion Furosemide,38,14.36,12
+192,Furosemide Famotidine Omeprazole,25,518.44,29
+193,Glyburide Metoprolol Prednisone,35,11.80,88
+194,Glipizide Warfarin Glyburide,13,684.39,52
+195,Codeine Rosuvastatin,21,676.45,5
+196,Topiramate Clopidogrel,39,1467.04,15
+197,Chlorpheniramine Ranitidine,32,904.22,35
+198,Sitagliptin,39,476.38,66
+199,Sertraline Diltiazem,20,80.44,77
+200,Alprazolam Bupropion Esomeprazole,24,851.83,40
+201,Sertraline,26,1273.54,79
+202,Chlorpheniramine,13,23.90,63
+203,Levetiracetam,44,517.39,17
+204,Naltrexone,42,911.60,44
+205,Glyburide Diltiazem,3,1251.17,7
+206,Tramadol,17,256.65,2
+207,Esomeprazole,36,487.63,39
+208,Metformin Warfarin,19,363.92,44
+209,Simvastatin Glyburide,10,511.88,7
+210,Alprazolam Simvastatin Acetaminophen,11,1053.13,5
+211,Esomeprazole Chlorpheniramine Levothyroxine,5,1421.58,14
+212,Furosemide,5,952.52,44
+213,Omeprazole Sertraline,17,877.36,89
+214,Gabapentin Bupropion Ketorolac,16,211.76,27
+215,Omeprazole Insulin Famotidine,30,149.24,14
+216,Hydrocodone Omeprazole Naltrexone,48,0.54,84
+217,Metoprolol,27,44.48,66
+218,Gabapentin,31,518.77,20
+219,Aspirin,29,342.44,10
+220,Acetaminophen Gabapentin Carvedilol,38,394.74,6
+221,Acetaminophen Codeine Losartan,6,1381.42,68
+222,Sertraline Alprazolam,11,972.56,81
+223,Insulin Naproxen Gabapentin,15,1240.19,19
+224,Hydrocodone,8,489.32,50
+225,Gabapentin Metoprolol Atorvastatin,4,935.71,80
+226,Furosemide,2,498.24,48
+227,Simvastatin Esomeprazole Valproic-acid,27,951.71,75
+228,Sertraline Insulin,31,333.61,78
+229,Venlafaxine,16,659.99,91
+230,Duloxetine Atorvastatin,10,489.50,29
+231,Metformin Sertraline Levothyroxine,20,1301.13,40
+232,Famotidine Topiramate Sildenafil,16,799.72,5
+233,Levothyroxine Hydrocodone,47,468.87,59
+234,Tadalafil,38,23.01,7
+235,Valproic-acid Glipizide,48,371.66,51
+236,Alprazolam Clopidogrel,36,354.28,78
+237,Nitroglycerin,4,16.00,43
+238,Dexamethasone Naltrexone,35,55.75,5
+239,Glipizide Tramadol,22,852.60,32
+240,Dexamethasone Esomeprazole,41,364.83,52
+241,Buprenorphine Citalopram,32,758.95,41
+242,Sitagliptin Ondansetron,10,71.79,30
+243,Sitagliptin,45,935.20,67
+244,Pregabalin,34,56.03,79
+245,Tadalafil,34,1237.00,43
+246,Gabapentin Acetaminophen,30,133.53,58
+247,Carvedilol Clopidogrel Esomeprazole,42,36.19,51
+248,Prednisone,8,134.88,54
+249,Warfarin Amoxicillin,2,224.76,70
+250,Diltiazem,13,734.08,23
+251,Levetiracetam Levothyroxine Valproic-acid,37,27.58,0
+252,Dexamethasone Insulin,10,1256.46,86
+253,Diltiazem,4,626.80,31
+254,Naltrexone Chlorpheniramine Ondansetron,14,41.33,1
+255,Valproic-acid Prednisone Levothyroxine,40,2.00,11
+256,Diltiazem Warfarin,47,44.50,85
+257,Alprazolam Amoxicillin,50,29.95,5
+258,Duloxetine Chlorpheniramine,18,631.13,19
+259,Mirtazapine Chlorpheniramine Citalopram,25,489.91,23
+260,Famotidine,33,648.27,64
+261,Rosuvastatin,42,1.85,100
+262,Metoprolol,41,214.68,27
+263,Tramadol Duloxetine,37,390.40,55
+264,Hydrochlorothiazide Amoxicillin,16,250.59,75
+265,Clopidogrel,35,193.88,76
+266,Clopidogrel,8,45.50,36
+267,Sildenafil Chlorpheniramine,41,259.60,22
+268,Topiramate Simvastatin,39,1355.33,34
+269,Simvastatin,44,1312.78,37
+270,Duloxetine Metoprolol Sertraline,5,252.96,74
+271,Metoprolol Gabapentin,10,46.08,18
+272,Hydrocodone Clopidogrel,24,1234.32,51
+273,Metformin Bupropion Ondansetron,28,13.00,21
+274,Metformin Ibuprofen,30,145.70,19
+275,Tamsulosin Bupropion,1,1326.27,98
+276,Ranitidine,38,5.92,24
+277,Venlafaxine,10,1208.10,84
+278,Codeine,48,19.10,89
+279,Valproic-acid,5,324.07,39
+280,Mirtazapine Losartan,10,30.21,2
+281,Tramadol Insulin Simvastatin,47,809.59,2
+282,Naltrexone Pregabalin,3,953.37,4
+283,Furosemide Ketorolac,41,1076.48,10
+284,Glipizide,4,763.39,37
+285,Pregabalin Insulin Hydrocodone,49,62.72,65
+286,Dexamethasone Metformin,7,646.46,84
+287,Ranitidine Sertraline Omeprazole,10,1085.89,39
+288,Topiramate Levetiracetam,23,145.89,88
+289,Bupropion Prednisone Omeprazole,34,449.29,37
+290,Losartan Citalopram,5,1292.96,19
+291,Tadalafil,29,81.50,22
+292,Dexamethasone Venlafaxine Codeine,29,451.22,35
+293,Ranitidine Alprazolam Metoprolol,44,1.88,84
+294,Duloxetine,31,383.81,61
+295,Famotidine Duloxetine Bupropion,2,59.33,51
+296,Ibuprofen,31,1414.68,35
+297,Carvedilol Diltiazem,16,407.04,71
+298,Bupropion,24,726.79,55
+299,Sertraline Naltrexone,33,520.83,90
+300,Levetiracetam Ondansetron Omeprazole,36,0.99,22
