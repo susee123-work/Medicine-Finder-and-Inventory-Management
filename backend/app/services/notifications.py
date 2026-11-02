@@ -144,3 +144,4 @@ class NotificationService:
         return html
 
 notification_service = NotificationService()
+

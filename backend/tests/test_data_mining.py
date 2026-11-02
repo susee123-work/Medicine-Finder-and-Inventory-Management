@@ -47,3 +47,4 @@ def test_supplier_reliability_scoring():
     assert "on_time_delivery_pct" in first
     assert "fill_rate_pct" in first
     assert "partner_tier" in first
+

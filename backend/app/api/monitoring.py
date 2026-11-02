@@ -76,3 +76,4 @@ def get_prometheus_metrics():
     ]
     
     return Response(content="\n".join(lines) + "\n", media_type="text/plain; version=0.0.4; charset=utf-8")
+

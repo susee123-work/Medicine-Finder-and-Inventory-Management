@@ -38,3 +38,4 @@ export default function EmptyState({ icon: Icon, title, description, actionText,
     </div>
   );
 }
+

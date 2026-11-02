@@ -26,6 +26,39 @@ def execute_olap_query(query: OLAPQueryIn, user = Depends(get_current_user_optio
     )
     return res
 
+@router.get("/query")
+def get_olap_query(
+    dim: Optional[str] = None,
+    dimensions: Optional[str] = None,
+    measure: Optional[str] = None,
+    measures: Optional[str] = None,
+    schema_type: str = "star",
+    compare_pop: bool = False,
+    period_comparison: bool = False,
+    top_n: Optional[int] = None,
+    order_by: Optional[str] = None,
+    order_desc: bool = True,
+    user = Depends(get_current_user_optional)
+):
+    """Convenience GET query endpoint supporting comma-separated dimension and measure strings."""
+    dims = []
+    raw_dim = dimensions or dim
+    if raw_dim:
+        dims = [d.strip() for d in raw_dim.split(",") if d.strip()]
+    meas = []
+    raw_meas = measures or measure
+    if raw_meas:
+        meas = [m.strip() for m in raw_meas.split(",") if m.strip()]
+    return olap_engine.query(
+        schema_type=schema_type,
+        dimensions=dims or ["therapeutic_category"],
+        measures=meas or ["units_sold", "revenue"],
+        period_comparison=compare_pop or period_comparison,
+        top_n=top_n,
+        order_by=order_by,
+        order_desc=order_desc
+    )
+
 @router.get("/cube")
 def get_olap_cube():
     """
@@ -68,3 +101,29 @@ def save_olap_view(view: SavedViewIn, user = Depends(get_current_user_optional))
         query_config=view.query_config
     )
     return saved
+
+@router.get("/schema-metadata")
+def get_schema_metadata():
+    """Returns visual schema diagrams, table grain, foreign keys, and preview data for Star & Snowflake."""
+    return olap_engine.get_schema_metadata()
+
+@router.get("/snowflake-hierarchies")
+def get_snowflake_hierarchies():
+    """Returns live nested hierarchy roll-up trees for ATC classification, Geography, and Time."""
+    return olap_engine.get_snowflake_hierarchies()
+
+@router.get("/pivot-matrix")
+def get_pivot_matrix(
+    row_dim: str = "therapeutic_category",
+    col_dim: str = "quarter_name",
+    measure: str = "revenue",
+    schema_type: str = "star"
+):
+    """Returns a 2D cross-tabulation pivot matrix with row/col totals and heatmap intensity values."""
+    return olap_engine.get_pivot_matrix(
+        row_dim=row_dim,
+        col_dim=col_dim,
+        measure=measure,
+        schema_type=schema_type
+    )
+

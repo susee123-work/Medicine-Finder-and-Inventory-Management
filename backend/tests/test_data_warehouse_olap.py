@@ -56,3 +56,4 @@ def test_olap_cube_endpoint(client):
     cube = resp.json()
     assert "cells" in cube
     assert len(cube["cells"]) > 0
+

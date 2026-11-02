@@ -221,3 +221,4 @@ CREATE TABLE model_registry (
 1. **Supply Equity**: Forecasting models are intentionally unweighted by customer demographic purchasing power to ensure life-saving medicines are allocated based on epidemiological clinical necessity rather than pharmacy gross profit margins.
 2. **Panic-Buying Protection**: CUSUM surge detection dampens transient demand spikes caused by media hoarding rumors by cross-referencing multi-pharmacy regional trends before elevating to Critical Outbreak status.
 3. **Clinical Substitution**: The generic substitution engine only recommends chemically bio-equivalent pharmaceuticals with matching International Nonproprietary Names (INN) and identical dosages, adhering to strict medical safety guidelines.
+

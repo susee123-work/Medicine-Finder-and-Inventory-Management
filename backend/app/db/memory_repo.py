@@ -264,3 +264,4 @@ class MemoryRepository:
     def clear(self):
         for k in self.tables:
             self.tables[k] = []
+

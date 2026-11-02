@@ -13,3 +13,4 @@ export default function LoadingSkeleton({ height = 40, count = 1, style = {} }) 
     </div>
   );
 }
+

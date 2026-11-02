@@ -6,7 +6,6 @@ import {
   Network,
   Truck,
   RefreshCw,
-  Cpu,
   BarChart3,
   Award,
   Zap,
@@ -14,8 +13,6 @@ import {
 } from 'lucide-react';
 import { api } from '../api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import EmptyState from '../components/EmptyState';
-import RiskBadge from '../components/RiskBadge';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -457,3 +454,4 @@ export default function DataMiningStudio() {
     </div>
   );
 }
+

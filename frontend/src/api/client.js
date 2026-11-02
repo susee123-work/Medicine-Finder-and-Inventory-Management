@@ -107,7 +107,11 @@ export const api = {
     runEtl: () => request('/analytics/olap/etl/run', { method: 'POST' }),
     etlHistory: () => request('/analytics/olap/etl/history'),
     savedViews: () => request('/analytics/olap/saved-views'),
-    saveView: (view) => request('/analytics/olap/saved-views', { method: 'POST', body: JSON.stringify(view) })
+    saveView: (view) => request('/analytics/olap/saved-views', { method: 'POST', body: JSON.stringify(view) }),
+    schemaMetadata: () => request('/analytics/olap/schema-metadata'),
+    snowflakeHierarchies: () => request('/analytics/olap/snowflake-hierarchies'),
+    pivotMatrix: (rowDim = 'therapeutic_category', colDim = 'quarter_name', measure = 'revenue', schemaType = 'star') =>
+      request(`/analytics/olap/pivot-matrix?row_dim=${rowDim}&col_dim=${colDim}&measure=${measure}&schema_type=${schemaType}`)
   },
 
   // Data Mining Studio
@@ -133,3 +137,4 @@ export const api = {
     health: () => request('/health')
   }
 };
+

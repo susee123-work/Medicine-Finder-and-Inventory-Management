@@ -71,3 +71,4 @@ def test_monitoring_health_and_metrics(client):
     assert metrics.status_code == 200
     assert "medipulse_uptime_seconds" in metrics.text
     assert "medipulse_pharmacies_total" in metrics.text
+

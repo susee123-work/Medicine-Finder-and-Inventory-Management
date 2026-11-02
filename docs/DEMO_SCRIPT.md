@@ -219,3 +219,4 @@ flowchart LR
 ### Q5: How do you prevent stockout hoarding when public health alerts are issued?
 **Answer**:
 > *"Alerts are strictly compartmentalized by role. Detailed surge and community shortage intelligence is restricted to verified `health_official` and `pharmacy_admin` roles. The public patient portal only shows real-time availability and generic substitutes without exposing macro-shortage severity metrics, preventing panic buying and speculative hoarding."*
+

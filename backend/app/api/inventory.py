@@ -54,15 +54,13 @@ def add_medicine(m: MedicineIn, user = Depends(get_current_user_optional)):
 
 # ---------- INVENTORY & BATCHES (FEFO) ----------
 @router.get("/inventory")
-def get_inventory(pharmacy_id: str = Query(..., description="Pharmacy UUID")):
+@router.get("/inventory/batches")
+def get_inventory(pharmacy_id: Optional[str] = Query(None, description="Pharmacy UUID")):
     """List stock batches for pharmacy ordered by expiry date (FEFO priority)."""
-    return rows(
-        db.table("inventory")
-        .select("*, medicines(id, name, generic_name, strength, dosage_form, atc_code, therapeutic_category)")
-        .eq("pharmacy_id", pharmacy_id)
-        .order("expiry_date")
-        .execute()
-    )
+    q = db.table("inventory").select("*, medicines(id, name, generic_name, strength, dosage_form, atc_code, therapeutic_category)")
+    if pharmacy_id:
+        q = q.eq("pharmacy_id", pharmacy_id)
+    return rows(q.order("expiry_date").execute())
 
 @router.post("/inventory")
 def upsert_stock(s: StockIn, user = Depends(get_current_user_optional)):
@@ -371,3 +369,4 @@ def _check_and_notify_restock(medicine_id: str, pharmacy_id: str, quantity: int)
             html_content=f"<p>Good news! Fresh stock ({quantity} units) of <b>{med_name}</b> has arrived at the pharmacy.</p>"
         )
         db.table("restock_subscriptions").update({"is_notified": True, "notified_at": now_iso()}).eq("id", sub["id"]).execute()
+

@@ -68,3 +68,4 @@ def test_shortage_prediction_endpoint(client):
     assert "forecast_7d" in first
     assert len(first["forecast_7d"]) == 7
     assert "top_risk_factors" in first
+

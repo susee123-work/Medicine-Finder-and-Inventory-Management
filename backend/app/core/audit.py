@@ -31,3 +31,4 @@ def log_audit_event(
         logger.info("Audit: [%s] on %s id=%s by user=%s", action, entity_type, entity_id, actor_user_id)
     except Exception as e:
         logger.error("Failed to write audit log: %s", e)
+

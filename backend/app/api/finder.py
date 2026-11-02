@@ -35,10 +35,13 @@ def is_pharmacy_open(pharm: Dict[str, Any]) -> bool:
         return True
 
 @router.get("", dependencies=[Depends(check_rate_limit)])
+@router.get("/search", dependencies=[Depends(check_rate_limit)])
 def search_nearby_medicines(
-    medicine: str = Query(..., min_length=1, description="Medicine brand name or generic molecule"),
+    medicine: Optional[str] = Query(None, description="Medicine brand name or generic molecule"),
+    medicine_name: Optional[str] = Query(None, description="Alias for medicine query"),
     lat: Optional[float] = Query(None, description="Patient Latitude"),
     lng: Optional[float] = Query(None, description="Patient Longitude"),
+    radius_km: Optional[float] = Query(None, description="Search radius in kilometers"),
     open_now: Optional[bool] = Query(False, description="Filter for pharmacies currently open"),
     in_stock_only: Optional[bool] = Query(True, description="Only show pharmacies with available stock")
 ):
@@ -46,11 +49,15 @@ def search_nearby_medicines(
     Search for medicines across community pharmacies with verification freshness timestamps,
     distance calculation, operating hours filter, and generic substitutes recommendation.
     """
+    query_term = (medicine or medicine_name or "").strip()
+    if not query_term:
+        raise HTTPException(422, "Please provide 'medicine' or 'medicine_name' search term")
+
     # Find matching medicines by brand or generic name
     meds = rows(
         db.table("medicines")
         .select("id, name, generic_name, strength, dosage_form, therapeutic_category, atc_code, default_price")
-        .ilike("name", f"%{medicine}%")
+        .ilike("name", f"%{query_term}%")
         .execute()
     )
     if not meds:
@@ -58,7 +65,7 @@ def search_nearby_medicines(
         meds = rows(
             db.table("medicines")
             .select("id, name, generic_name, strength, dosage_form, therapeutic_category, atc_code, default_price")
-            .ilike("generic_name", f"%{medicine}%")
+            .ilike("generic_name", f"%{query_term}%")
             .execute()
         )
 

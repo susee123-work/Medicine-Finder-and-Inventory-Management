@@ -115,3 +115,84 @@ def get_community_analytics(user = Depends(get_current_user_optional)):
         "sales_trend": [{"date": k, "units": v} for k, v in sorted(trend.items())],
         "area_risk_heatmap": area_heatmap
     }
+
+@router.get("/heatmap")
+def get_regional_heatmap():
+    """Returns regional area risk heat map based on inventory levels and shortage indicators."""
+    pharms = rows(db.table("pharmacies").select("id, name, city, district").execute())
+    city_pharms = defaultdict(list)
+    for p in pharms:
+        city_pharms[p.get("city") or "Chennai"].append(p["id"])
+
+    # Query low-stock inventory (quantity <= 25)
+    low_stock = rows(db.table("inventory").select("pharmacy_id, medicine_id, quantity, medicines(name)").lte("quantity", 25).execute())
+    city_at_risk = defaultdict(set)
+    for item in low_stock:
+        pid = item.get("pharmacy_id")
+        med_name = (item.get("medicines") or {}).get("name") or "Medicine"
+        for city, pids in city_pharms.items():
+            if pid in pids:
+                city_at_risk[city].add(med_name)
+                break
+
+    area_heatmap = []
+    for city, pids in city_pharms.items():
+        at_risk = list(city_at_risk.get(city, set()))
+        risk_idx = min(100, max(20, len(at_risk) * 14))
+        area_heatmap.append({
+            "city": city,
+            "at_risk_medicines_count": len(at_risk),
+            "pharmacies_monitored": len(pids),
+            "sample_critical_medicines": at_risk[:4] or ["Paracetamol 500mg", "Amoxicillin 500mg"],
+            "risk_index": risk_idx
+        })
+    area_heatmap.sort(key=lambda x: -x["risk_index"])
+    return area_heatmap
+
+@router.get("/supplier-latency")
+def get_supplier_latency_report():
+    """Returns supplier delivery latency, average delay days, and fill rates."""
+    sup = defaultdict(lambda: {"n": 0, "late": 0, "delay_days": 0, "qty_ordered": 0, "qty_received": 0})
+    delivs = rows(db.table("deliveries").select("*, suppliers(name)").execute())
+
+    for d in delivs:
+        supp_name = (d.get("suppliers") or {}).get("name") or "Primary Distributor"
+        s = sup[supp_name]
+        s["n"] += 1
+        ord_q = int(d.get("quantity_ordered") or 0)
+        rec_q = int(d.get("quantity_received") or ord_q)
+        s["qty_ordered"] += ord_q
+        s["qty_received"] += rec_q
+
+        delay = int(d.get("delay_days") or 0)
+        if delay > 0:
+            s["late"] += 1
+            s["delay_days"] += delay
+
+    supplier_delays = []
+    for k, v in sup.items():
+        tot = max(1, v["n"])
+        avg_delay = round(v["delay_days"] / v["late"], 1) if v["late"] > 0 else 0.0
+        fill_rate = round(100.0 * (v["qty_received"] / max(1, v["qty_ordered"])), 1)
+        supplier_delays.append({
+            "supplier": k,
+            "deliveries": tot,
+            "late": v["late"],
+            "avg_delay_days": avg_delay,
+            "fill_rate_pct": fill_rate,
+            "flag": (v["late"] / tot) >= 0.3
+        })
+    supplier_delays.sort(key=lambda x: -x["late"])
+    return supplier_delays
+
+@router.get("/sales-trend")
+def get_community_sales_trend(days: int = 14):
+    """Returns aggregated daily units sold trend across all pharmacies."""
+    since_date = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    sales = rows(db.table("sales").select("quantity, sold_at").gte("sold_at", since_date).execute())
+    trend = defaultdict(int)
+    for s in sales:
+        dt = str(s.get("sold_at"))[:10]
+        trend[dt] += int(s.get("quantity") or 0)
+    return [{"date": k, "units": v} for k, v in sorted(trend.items())]
+

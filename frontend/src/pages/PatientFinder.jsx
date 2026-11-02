@@ -3,14 +3,10 @@ import {
   Search,
   MapPin,
   Clock,
-  Phone,
   CheckCircle2,
-  XCircle,
-  AlertCircle,
   Send,
   Navigation,
-  Pill,
-  ExternalLink
+  Pill
 } from 'lucide-react';
 import { api } from '../api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -21,7 +17,7 @@ export default function PatientFinder() {
   const [query, setQuery] = useState('Amoxicillin');
   const [openNow, setOpenNow] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(true);
-  const [patientCoords, setPatientCoords] = useState({ lat: 13.0418, lng: 80.2341 }); // Chennai center
+  const [patientCoords] = useState({ lat: 13.0418, lng: 80.2341 }); // Chennai center
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
   const [substitutes, setSubstitutes] = useState([]);
@@ -61,6 +57,7 @@ export default function PatientFinder() {
 
   useEffect(() => {
     doSearch('Amoxicillin');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openNow, inStockOnly]);
 
   const handleSubmitConfirm = async (e) => {
@@ -399,3 +396,4 @@ export default function PatientFinder() {
     </div>
   );
 }
+

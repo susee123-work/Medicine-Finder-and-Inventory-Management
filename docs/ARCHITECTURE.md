@@ -327,3 +327,4 @@ flowchart TB
 
 - **Containerization**: Both frontend and backend feature multi-stage production Dockerfiles with a unifying `docker-compose.yml` for unified one-command local orchestration.
 - **Observability**: Real-time health probes at `/health` and native Prometheus metric scrapers at `/metrics` exporting request counts, latencies, and active model versions.
+

@@ -161,3 +161,4 @@ def _demo_login_fallback(email: str, password: str) -> Token:
         is_active=True
     )
     return Token(access_token=token, token_type="bearer", user=user_out)
+

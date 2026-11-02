@@ -31,3 +31,4 @@ async def check_rate_limit(request: Request):
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Rate limit exceeded. Please wait a moment before trying again."
         )
+

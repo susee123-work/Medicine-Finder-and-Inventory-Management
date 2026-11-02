@@ -231,4 +231,529 @@ class OLAPEngine:
         self.saved_views.append(new_view)
         return new_view
 
+    def get_schema_metadata(self) -> Dict[str, Any]:
+        """Returns visual architectural schema definitions for Star and Snowflake diagrams."""
+        star_tables = [
+            {
+                "id": "star_fact_daily_sales",
+                "name": "star_fact_daily_sales",
+                "type": "fact",
+                "label": "Fact Daily Sales",
+                "grain": "1 row per Date × Pharmacy × Medicine × Area",
+                "pk": "fact_id",
+                "fks": [
+                    {"col": "date_key", "ref": "star_dim_date.date_key"},
+                    {"col": "pharmacy_key", "ref": "star_dim_pharmacy.pharmacy_key"},
+                    {"col": "medicine_key", "ref": "star_dim_medicine.medicine_key"},
+                    {"col": "area_key", "ref": "star_dim_area.area_key"}
+                ],
+                "measures": ["units_sold", "gross_revenue", "net_revenue", "transaction_count"],
+                "color": "#0fa3a3",
+                "description": "Central transactional sales fact table powering rapid multidimensional OLAP aggregations."
+            },
+            {
+                "id": "star_fact_deliveries",
+                "name": "star_fact_deliveries",
+                "type": "fact",
+                "label": "Fact Purchase Deliveries",
+                "grain": "1 row per purchase order delivery receipt",
+                "pk": "delivery_fact_id",
+                "fks": [
+                    {"col": "ordered_date_key", "ref": "star_dim_date.date_key"},
+                    {"col": "received_date_key", "ref": "star_dim_date.date_key"},
+                    {"col": "supplier_key", "ref": "star_dim_supplier.supplier_key"},
+                    {"col": "pharmacy_key", "ref": "star_dim_pharmacy.pharmacy_key"}
+                ],
+                "measures": ["quantity_ordered", "quantity_received", "lead_time_days", "delay_days", "fill_rate_pct"],
+                "color": "#3b82f6",
+                "description": "Distributor lead time, fulfillment fill rate, and delay latency metrics."
+            },
+            {
+                "id": "star_dim_date",
+                "name": "star_dim_date",
+                "type": "dimension",
+                "label": "Dim Date (Conformed)",
+                "grain": "1 row per calendar day",
+                "pk": "date_key",
+                "attributes": ["full_date", "day_name", "day_of_week", "month", "month_name", "quarter", "quarter_name", "year", "is_weekend"],
+                "color": "#f59e0b",
+                "description": "Denormalized calendar dimension covering 400 operational days."
+            },
+            {
+                "id": "star_dim_pharmacy",
+                "name": "star_dim_pharmacy",
+                "type": "dimension",
+                "label": "Dim Pharmacy (SCD Type 2)",
+                "grain": "1 row per dispensary version",
+                "pk": "pharmacy_key",
+                "attributes": ["pharmacy_id", "name", "city", "district", "state", "postal_code", "is_current", "row_effective_date", "row_expiration_date"],
+                "color": "#10b981",
+                "description": "Retail pharmacy dispensaries with slowly changing dimensions (Type 2)."
+            },
+            {
+                "id": "star_dim_medicine",
+                "name": "star_dim_medicine",
+                "type": "dimension",
+                "label": "Dim Medicine (SCD Type 2)",
+                "grain": "1 row per pharmaceutical drug version",
+                "pk": "medicine_key",
+                "attributes": ["medicine_id", "name", "generic_name", "dosage_form", "strength", "therapeutic_category", "atc_code", "atc_level1", "default_price", "is_current"],
+                "color": "#8b5cf6",
+                "description": "Essential medicine catalogue with flattened therapeutic categories and SCD Type 2 price versioning."
+            },
+            {
+                "id": "star_dim_supplier",
+                "name": "star_dim_supplier",
+                "type": "dimension",
+                "label": "Dim Supplier",
+                "grain": "1 row per distributor",
+                "pk": "supplier_key",
+                "attributes": ["supplier_id", "name", "city", "typical_lead_time_days", "reliability_rating"],
+                "color": "#ec4899",
+                "description": "Pharmaceutical distributor profiles and on-time delivery ratings."
+            },
+            {
+                "id": "star_dim_area",
+                "name": "star_dim_area",
+                "type": "dimension",
+                "label": "Dim Area",
+                "grain": "1 row per locality",
+                "pk": "area_key",
+                "attributes": ["locality", "city", "district", "state", "postal_code", "zone"],
+                "color": "#6366f1",
+                "description": "Geographical jurisdiction boundaries across metropolitan areas."
+            }
+        ]
+
+        for t in star_tables:
+            try:
+                res = rows(db.table(t["name"]).select("*").limit(3).execute())
+                count_res = len(rows(db.table(t["name"]).select(t["pk"]).execute()))
+                t["row_count"] = count_res
+                t["sample_rows"] = res
+            except Exception:
+                t["row_count"] = 0
+                t["sample_rows"] = []
+
+        snow_tables = [
+            {
+                "id": "snow_fact_daily_sales",
+                "name": "snow_fact_daily_sales",
+                "type": "fact",
+                "label": "Fact Sales (3NF Normalized)",
+                "grain": "1 row per Day × Locality × Form × Drug",
+                "pk": "fact_id",
+                "fks": [
+                    {"col": "date_key", "ref": "snow_dim_day.date_key"},
+                    {"col": "locality_id", "ref": "snow_dim_locality.locality_id"},
+                    {"col": "dosage_form_id", "ref": "snow_dim_dosage_form.dosage_form_id"}
+                ],
+                "measures": ["units_sold", "net_revenue", "transaction_count"],
+                "color": "#0fa3a3",
+                "description": "Central snowflake fact table pointing to normalized sub-dimension branches."
+            },
+            # Time Hierarchy Branch
+            {
+                "id": "snow_dim_day",
+                "name": "snow_dim_day",
+                "type": "dimension",
+                "hierarchy": "Time",
+                "level": 1,
+                "label": "Dim Day (Leaf)",
+                "pk": "date_key",
+                "fks": [{"col": "month_id", "ref": "snow_dim_month.month_id"}],
+                "attributes": ["full_date", "day_number", "day_name", "is_weekend"],
+                "color": "#f59e0b"
+            },
+            {
+                "id": "snow_dim_month",
+                "name": "snow_dim_month",
+                "type": "dimension",
+                "hierarchy": "Time",
+                "level": 2,
+                "label": "Dim Month",
+                "pk": "month_id",
+                "fks": [{"col": "quarter_id", "ref": "snow_dim_quarter.quarter_id"}],
+                "attributes": ["month_name", "month_number"],
+                "color": "#f59e0b"
+            },
+            {
+                "id": "snow_dim_quarter",
+                "name": "snow_dim_quarter",
+                "type": "dimension",
+                "hierarchy": "Time",
+                "level": 3,
+                "label": "Dim Quarter",
+                "pk": "quarter_id",
+                "fks": [{"col": "year_id", "ref": "snow_dim_year.year_id"}],
+                "attributes": ["quarter_number", "quarter_label"],
+                "color": "#f59e0b"
+            },
+            {
+                "id": "snow_dim_year",
+                "name": "snow_dim_year",
+                "type": "dimension",
+                "hierarchy": "Time",
+                "level": 4,
+                "label": "Dim Year (Root)",
+                "pk": "year_id",
+                "attributes": ["year_number"],
+                "color": "#f59e0b"
+            },
+            # Geography Hierarchy Branch
+            {
+                "id": "snow_dim_locality",
+                "name": "snow_dim_locality",
+                "type": "dimension",
+                "hierarchy": "Geography",
+                "level": 1,
+                "label": "Dim Locality (Leaf)",
+                "pk": "locality_id",
+                "fks": [{"col": "city_id", "ref": "snow_dim_city.city_id"}],
+                "attributes": ["locality_name"],
+                "color": "#10b981"
+            },
+            {
+                "id": "snow_dim_city",
+                "name": "snow_dim_city",
+                "type": "dimension",
+                "hierarchy": "Geography",
+                "level": 2,
+                "label": "Dim City",
+                "pk": "city_id",
+                "fks": [{"col": "district_id", "ref": "snow_dim_district.district_id"}],
+                "attributes": ["city_name", "postal_code"],
+                "color": "#10b981"
+            },
+            {
+                "id": "snow_dim_district",
+                "name": "snow_dim_district",
+                "type": "dimension",
+                "hierarchy": "Geography",
+                "level": 3,
+                "label": "Dim District",
+                "pk": "district_id",
+                "fks": [{"col": "state_id", "ref": "snow_dim_state.state_id"}],
+                "attributes": ["district_name"],
+                "color": "#10b981"
+            },
+            {
+                "id": "snow_dim_state",
+                "name": "snow_dim_state",
+                "type": "dimension",
+                "hierarchy": "Geography",
+                "level": 4,
+                "label": "Dim State (Root)",
+                "pk": "state_id",
+                "attributes": ["state_name", "country"],
+                "color": "#10b981"
+            },
+            # ATC Classification Branch
+            {
+                "id": "snow_dim_atc_level3",
+                "name": "snow_dim_atc_level3",
+                "type": "dimension",
+                "hierarchy": "ATC Classification",
+                "level": 1,
+                "label": "ATC Level 3 (Pharmacological)",
+                "pk": "atc_level3_id",
+                "fks": [{"col": "atc_level2_id", "ref": "snow_dim_atc_level2.atc_level2_id"}],
+                "attributes": ["pharmacological_subgroup"],
+                "color": "#8b5cf6"
+            },
+            {
+                "id": "snow_dim_atc_level2",
+                "name": "snow_dim_atc_level2",
+                "type": "dimension",
+                "hierarchy": "ATC Classification",
+                "level": 2,
+                "label": "ATC Level 2 (Therapeutic)",
+                "pk": "atc_level2_id",
+                "fks": [{"col": "atc_level1_id", "ref": "snow_dim_atc_level1.atc_level1_id"}],
+                "attributes": ["therapeutic_subgroup"],
+                "color": "#8b5cf6"
+            },
+            {
+                "id": "snow_dim_atc_level1",
+                "name": "snow_dim_atc_level1",
+                "type": "dimension",
+                "hierarchy": "ATC Classification",
+                "level": 3,
+                "label": "ATC Level 1 (Anatomical Root)",
+                "pk": "atc_level1_id",
+                "attributes": ["anatomical_main_group"],
+                "color": "#8b5cf6"
+            },
+            {
+                "id": "snow_dim_dosage_form",
+                "name": "snow_dim_dosage_form",
+                "type": "dimension",
+                "hierarchy": "Formulation",
+                "level": 1,
+                "label": "Dim Dosage Form",
+                "pk": "dosage_form_id",
+                "attributes": ["form_name", "route_of_administration"],
+                "color": "#ec4899"
+            }
+        ]
+
+        for t in snow_tables:
+            try:
+                res = rows(db.table(t["name"]).select("*").limit(3).execute())
+                count_res = len(rows(db.table(t["name"]).select(t["pk"]).execute()))
+                t["row_count"] = count_res
+                t["sample_rows"] = res
+            except Exception:
+                t["row_count"] = 0
+                t["sample_rows"] = []
+
+        return {
+            "star": {
+                "tables": star_tables,
+                "description": "Star Schema: Denormalized dimensional model. Single-hop joins deliver maximum aggregation speed for slice-and-dice queries, with trade-off of redundant attribute columns."
+            },
+            "snowflake": {
+                "tables": snow_tables,
+                "description": "Snowflake Schema: 3NF Normalized model. Dimensions are decomposed into hierarchical sub-tables (Time, Geography, ATC Classification), eliminating redundancy and guaranteeing integrity."
+            }
+        }
+
+    def get_snowflake_hierarchies(self) -> Dict[str, Any]:
+        """Builds live nested hierarchy trees for ATC, Geography, and Time with rolled-up metrics."""
+        # 1. Fetch sales and dimensions
+        sales = rows(db.table("star_fact_daily_sales").select("units_sold, net_revenue, medicine_key, pharmacy_key, date_key").execute())
+        meds = {m.get("medicine_key", 1): m for m in rows(db.table("star_dim_medicine").select("*").execute())}
+        pharms = {p.get("pharmacy_key", 1): p for p in rows(db.table("star_dim_pharmacy").select("*").execute())}
+        dates = {d["date_key"]: d for d in rows(db.table("star_dim_date").select("*").execute())}
+
+        # Aggregate metrics by medicine, pharmacy, date
+        med_sales = defaultdict(lambda: {"units": 0, "rev": 0.0})
+        pharm_sales = defaultdict(lambda: {"units": 0, "rev": 0.0})
+        date_sales = defaultdict(lambda: {"units": 0, "rev": 0.0})
+
+        for s in sales:
+            mkey = s.get("medicine_key", 1)
+            pkey = s.get("pharmacy_key", 1)
+            dkey = s.get("date_key", 20260101)
+            u = s.get("units_sold", 0)
+            r = float(s.get("net_revenue", 0.0))
+
+            med_sales[mkey]["units"] += u
+            med_sales[mkey]["rev"] += r
+            pharm_sales[pkey]["units"] += u
+            pharm_sales[pkey]["rev"] += r
+            date_sales[dkey]["units"] += u
+            date_sales[dkey]["rev"] += r
+
+        # 1. ATC Classification Hierarchy (Level 1 > Level 2 > Level 3 > Medicine)
+        l1_defs = {
+            "A": "Alimentary tract and metabolism",
+            "C": "Cardiovascular system",
+            "J": "Anti-infectives for systemic use",
+            "N": "Nervous system",
+            "R": "Respiratory system"
+        }
+        atc_tree = []
+        for l1_code, l1_name in sorted(l1_defs.items()):
+            l1_node = {
+                "id": f"ATC-L1-{l1_code}",
+                "name": f"{l1_code} - {l1_name}",
+                "level": 1,
+                "code": l1_code,
+                "units_sold": 0,
+                "revenue": 0.0,
+                "children": []
+            }
+            # Find matching medicines
+            l2_map = defaultdict(lambda: {"units": 0, "rev": 0.0, "meds": []})
+            for mkey, m in meds.items():
+                atc = m.get("atc_code") or "A02B"
+                if atc.startswith(l1_code):
+                    l2_code = atc[:3]
+                    m_metrics = med_sales.get(mkey, {"units": 0, "rev": 0.0})
+                    l2_map[l2_code]["units"] += m_metrics["units"]
+                    l2_map[l2_code]["rev"] += m_metrics["rev"]
+                    l2_map[l2_code]["meds"].append({
+                        "id": f"MED-{mkey}",
+                        "name": m.get("name"),
+                        "generic": m.get("generic_name"),
+                        "form": m.get("dosage_form"),
+                        "units_sold": m_metrics["units"],
+                        "revenue": round(m_metrics["rev"], 2),
+                        "price": m.get("default_price", 50.0)
+                    })
+
+            for l2_code, l2_data in sorted(l2_map.items()):
+                l2_node = {
+                    "id": f"ATC-L2-{l2_code}",
+                    "name": f"Subgroup {l2_code}",
+                    "level": 2,
+                    "code": l2_code,
+                    "units_sold": l2_data["units"],
+                    "revenue": round(l2_data["rev"], 2),
+                    "children": l2_data["meds"]
+                }
+                l1_node["units_sold"] += l2_data["units"]
+                l1_node["revenue"] += l2_data["rev"]
+                l1_node["children"].append(l2_node)
+
+            l1_node["revenue"] = round(l1_node["revenue"], 2)
+            if l1_node["children"]:
+                atc_tree.append(l1_node)
+
+        # 2. Geography Hierarchy (State > District > City > Pharmacy)
+        geo_tree = [{
+            "id": "GEO-STATE-TN",
+            "name": "Tamil Nadu",
+            "level": 1,
+            "units_sold": 0,
+            "revenue": 0.0,
+            "children": []
+        }]
+        dist_map = defaultdict(lambda: {"units": 0, "rev": 0.0, "pharms": []})
+        for pkey, p in pharms.items():
+            dist = p.get("district") or p.get("city") or "Chennai"
+            p_metrics = pharm_sales.get(pkey, {"units": 0, "rev": 0.0})
+            dist_map[dist]["units"] += p_metrics["units"]
+            dist_map[dist]["rev"] += p_metrics["rev"]
+            dist_map[dist]["pharms"].append({
+                "id": f"PHARM-{pkey}",
+                "name": p.get("name"),
+                "locality": p.get("locality"),
+                "city": p.get("city"),
+                "units_sold": p_metrics["units"],
+                "revenue": round(p_metrics["rev"], 2)
+            })
+
+        for dist_name, dist_data in sorted(dist_map.items()):
+            dist_node = {
+                "id": f"GEO-DIST-{dist_name}",
+                "name": f"District {dist_name}",
+                "level": 2,
+                "units_sold": dist_data["units"],
+                "revenue": round(dist_data["rev"], 2),
+                "children": dist_data["pharms"]
+            }
+            geo_tree[0]["units_sold"] += dist_data["units"]
+            geo_tree[0]["revenue"] += dist_data["rev"]
+            geo_tree[0]["children"].append(dist_node)
+
+        geo_tree[0]["revenue"] = round(geo_tree[0]["revenue"], 2)
+
+        # 3. Time Hierarchy (Year > Quarter > Month)
+        time_tree = [{
+            "id": "TIME-YEAR-2026",
+            "name": "Year 2026",
+            "level": 1,
+            "units_sold": 0,
+            "revenue": 0.0,
+            "children": []
+        }]
+        q_map = defaultdict(lambda: {"units": 0, "rev": 0.0, "months": defaultdict(lambda: {"units": 0, "rev": 0.0})})
+        for dkey, d in dates.items():
+            d_metrics = date_sales.get(dkey, {"units": 0, "rev": 0.0})
+            q_name = d.get("quarter_name") or "Q1"
+            m_name = d.get("month_name") or "January"
+            q_map[q_name]["units"] += d_metrics["units"]
+            q_map[q_name]["rev"] += d_metrics["rev"]
+            q_map[q_name]["months"][m_name]["units"] += d_metrics["units"]
+            q_map[q_name]["months"][m_name]["rev"] += d_metrics["rev"]
+
+        for q_name, q_data in sorted(q_map.items()):
+            q_node = {
+                "id": f"TIME-Q-{q_name}",
+                "name": q_name,
+                "level": 2,
+                "units_sold": q_data["units"],
+                "revenue": round(q_data["rev"], 2),
+                "children": []
+            }
+            for m_name, m_data in sorted(q_data["months"].items()):
+                q_node["children"].append({
+                    "id": f"TIME-M-{m_name}",
+                    "name": m_name,
+                    "level": 3,
+                    "units_sold": m_data["units"],
+                    "revenue": round(m_data["rev"], 2)
+                })
+            time_tree[0]["units_sold"] += q_data["units"]
+            time_tree[0]["revenue"] += q_data["rev"]
+            time_tree[0]["children"].append(q_node)
+
+        time_tree[0]["revenue"] = round(time_tree[0]["revenue"], 2)
+
+        return {
+            "atc_hierarchy": atc_tree,
+            "geo_hierarchy": geo_tree,
+            "time_hierarchy": time_tree
+        }
+
+    def get_pivot_matrix(
+        self,
+        row_dim: str = "therapeutic_category",
+        col_dim: str = "quarter_name",
+        measure: str = "revenue",
+        schema_type: str = "star"
+    ) -> Dict[str, Any]:
+        """Generates a 2D cross-tabulation matrix with totals and color bounds for heatmap visualization."""
+        cube = self.query(
+            schema_type=schema_type,
+            dimensions=[row_dim, col_dim],
+            measures=[measure],
+            period_comparison=False
+        )
+
+        cells = cube.get("cells", [])
+        row_headers = sorted(list(set(c.get(row_dim, "Unknown") for c in cells)))
+        col_headers = sorted(list(set(c.get(col_dim, "Unknown") for c in cells)))
+
+        # Build matrix
+        matrix = []
+        cell_lookup = {}
+        for c in cells:
+            r = c.get(row_dim, "Unknown")
+            col = c.get(col_dim, "Unknown")
+            cell_lookup[(r, col)] = c.get(measure, 0)
+
+        min_val = float("inf")
+        max_val = float("-inf")
+        row_totals = {r: 0 for r in row_headers}
+        col_totals = {col: 0 for col in col_headers}
+
+        for r in row_headers:
+            row_data = []
+            for col in col_headers:
+                val = cell_lookup.get((r, col), 0)
+                row_data.append(val)
+                row_totals[r] += val
+                col_totals[col] += val
+                if val < min_val:
+                    min_val = val
+                if val > max_val:
+                    max_val = val
+            matrix.append(row_data)
+
+        if min_val == float("inf"):
+            min_val = 0
+        if max_val == float("-inf"):
+            max_val = 1
+
+        grand_total = sum(row_totals.values())
+
+        return {
+            "schema_type": schema_type,
+            "row_dim": row_dim,
+            "col_dim": col_dim,
+            "measure": measure,
+            "row_headers": row_headers,
+            "col_headers": col_headers,
+            "matrix": matrix,
+            "row_totals": row_totals,
+            "col_totals": col_totals,
+            "grand_total": round(grand_total, 2) if measure == "revenue" else int(grand_total),
+            "min_val": min_val,
+            "max_val": max_val
+        }
+
 olap_engine = OLAPEngine()
+

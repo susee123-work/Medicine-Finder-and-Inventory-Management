@@ -110,3 +110,4 @@ def require_pharmacy_access(pharmacy_id: str, user: UserOut = Depends(get_curren
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Patients and unauthorized users cannot perform pharmacy inventory operations."
     )
+

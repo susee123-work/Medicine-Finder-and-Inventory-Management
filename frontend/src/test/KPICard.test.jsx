@@ -19,3 +19,4 @@ describe('KPICard component', () => {
     expect(html).toContain('+100%');
   });
 });
+

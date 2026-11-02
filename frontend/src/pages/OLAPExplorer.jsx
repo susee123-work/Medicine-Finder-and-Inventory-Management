@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Database,
-  Download,
-  Filter,
-  Play,
   Layers,
   History,
-  Save,
   CheckCircle,
   FileText,
   FileSpreadsheet,
-  ChevronDown
+  Grid,
+  GitBranch,
+  Play
 } from 'lucide-react';
 import { api } from '../api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
+import SchemaVisualizer from '../components/SchemaVisualizer';
+import SnowflakeHierarchyTree from '../components/SnowflakeHierarchyTree';
+import OLAPPivotHeatmap from '../components/OLAPPivotHeatmap';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -27,9 +27,8 @@ export default function OLAPExplorer() {
   const [topN, setTopN] = useState(10);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
-  const [savedViews, setSavedViews] = useState([]);
   const [etlRuns, setEtlRuns] = useState([]);
-  const [activeTab, setActiveTab] = useState('explorer'); // 'explorer' or 'etl_history'
+  const [activeTab, setActiveTab] = useState('explorer'); // 'explorer', 'pivot_heatmap', 'snowflake_tree', 'schema_visualizer', 'etl_history'
   const [etlRunning, setEtlRunning] = useState(false);
   const [etlResult, setEtlResult] = useState(null);
 
@@ -56,7 +55,7 @@ export default function OLAPExplorer() {
     { id: 'fill_rate_pct', label: 'Fulfillment Rate (%)' }
   ];
 
-  const runQuery = async () => {
+  const runQuery = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.olap.query({
@@ -72,15 +71,11 @@ export default function OLAPExplorer() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [schemaType, selectedDims, selectedMeasures, periodComparison, topN]);
 
   const loadMetadata = async () => {
     try {
-      const [views, runs] = await Promise.all([
-        api.olap.savedViews(),
-        api.olap.etlHistory()
-      ]);
-      setSavedViews(views);
+      const runs = await api.olap.etlHistory();
       setEtlRuns(runs);
     } catch (err) {
       console.warn('Could not load OLAP metadata:', err);
@@ -90,7 +85,7 @@ export default function OLAPExplorer() {
   useEffect(() => {
     runQuery();
     loadMetadata();
-  }, [schemaType, periodComparison, topN]);
+  }, [runQuery]);
 
   const handleToggleDim = (id) => {
     if (selectedDims.includes(id)) {
@@ -165,13 +160,13 @@ export default function OLAPExplorer() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>
-            Multidimensional OLAP Cube & Data Warehouse Explorer
+            Multidimensional OLAP Cube & Snowflake Architecture Explorer
           </h2>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
-            Interactive slice, dice, roll-up, drill-down across Star and Snowflake schemas with Period-over-Period comparisons.
+            Interactive slice, dice, roll-up, drill-down across Star and Snowflake schemas with 2D Heatmaps and Schema Architecture Visualizers.
           </p>
         </div>
 
@@ -181,7 +176,7 @@ export default function OLAPExplorer() {
             <button
               onClick={() => setSchemaType('star')}
               style={{
-                padding: '6px 12px',
+                padding: '6px 14px',
                 border: 'none',
                 fontSize: 12,
                 fontWeight: 600,
@@ -195,7 +190,7 @@ export default function OLAPExplorer() {
             <button
               onClick={() => setSchemaType('snowflake')}
               style={{
-                padding: '6px 12px',
+                padding: '6px 14px',
                 border: 'none',
                 fontSize: 12,
                 fontWeight: 600,
@@ -228,39 +223,111 @@ export default function OLAPExplorer() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 12, borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
+      {/* Navigation Tabs */}
+      <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--border)', marginBottom: 18, overflowX: 'auto' }}>
         <button
           onClick={() => setActiveTab('explorer')}
           style={{
-            padding: '8px 16px',
+            padding: '10px 16px',
             border: 'none',
             borderBottom: activeTab === 'explorer' ? '2px solid var(--primary)' : '2px solid transparent',
             background: 'transparent',
             color: activeTab === 'explorer' ? 'var(--primary)' : 'var(--text-secondary)',
             fontWeight: 600,
-            cursor: 'pointer'
+            fontSize: 13,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap'
           }}
         >
-          Cube Slice & Dice Explorer
+          <Layers size={16} /> Cube Slice & Dice
         </button>
+
+        <button
+          onClick={() => setActiveTab('pivot_heatmap')}
+          style={{
+            padding: '10px 16px',
+            border: 'none',
+            borderBottom: activeTab === 'pivot_heatmap' ? '2px solid var(--primary)' : '2px solid transparent',
+            background: 'transparent',
+            color: activeTab === 'pivot_heatmap' ? 'var(--primary)' : 'var(--text-secondary)',
+            fontWeight: 600,
+            fontSize: 13,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <Grid size={16} /> 2D Pivot Heatmap Matrix
+        </button>
+
+        <button
+          onClick={() => setActiveTab('snowflake_tree')}
+          style={{
+            padding: '10px 16px',
+            border: 'none',
+            borderBottom: activeTab === 'snowflake_tree' ? '2px solid var(--primary)' : '2px solid transparent',
+            background: 'transparent',
+            color: activeTab === 'snowflake_tree' ? 'var(--primary)' : 'var(--text-secondary)',
+            fontWeight: 600,
+            fontSize: 13,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <GitBranch size={16} /> ❄️ Snowflake Hierarchy Drill-Down
+        </button>
+
+        <button
+          onClick={() => setActiveTab('schema_visualizer')}
+          style={{
+            padding: '10px 16px',
+            border: 'none',
+            borderBottom: activeTab === 'schema_visualizer' ? '2px solid var(--primary)' : '2px solid transparent',
+            background: 'transparent',
+            color: activeTab === 'schema_visualizer' ? 'var(--primary)' : 'var(--text-secondary)',
+            fontWeight: 600,
+            fontSize: 13,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <span>📐</span> Interactive Schema Visualizer (Star vs Snowflake)
+        </button>
+
         <button
           onClick={() => setActiveTab('etl_history')}
           style={{
-            padding: '8px 16px',
+            padding: '10px 16px',
             border: 'none',
             borderBottom: activeTab === 'etl_history' ? '2px solid var(--primary)' : '2px solid transparent',
             background: 'transparent',
             color: activeTab === 'etl_history' ? 'var(--primary)' : 'var(--text-secondary)',
             fontWeight: 600,
-            cursor: 'pointer'
+            fontSize: 13,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap'
           }}
         >
-          ETL Runs Audit & SCD Log ({etlRuns.length})
+          <History size={16} /> ETL & SCD Audit Log ({etlRuns.length})
         </button>
       </div>
 
-      {activeTab === 'explorer' ? (
+      {/* Tab 1: Slice & Dice Explorer */}
+      {activeTab === 'explorer' && (
         <div>
           {/* Controls Panel */}
           <div className="card" style={{ marginBottom: 16 }}>
@@ -353,9 +420,9 @@ export default function OLAPExplorer() {
             <div className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                  Cube Result: <b>{data.cell_count} cells</b> aggregated across <b>{schemaType.toUpperCase()}</b> schema.
+                  Cube Result: <b>{data?.cell_count || 0} cells</b> aggregated across <b>{schemaType.toUpperCase()}</b> schema.
                 </span>
-                {data.totals && (
+                {data?.totals && (
                   <div style={{ fontSize: 12, display: 'flex', gap: 14 }}>
                     {data.totals.units_sold != null && <span>Total Units: <b>{data.totals.units_sold}</b></span>}
                     {data.totals.revenue != null && <span>Total Revenue: <b>₹{data.totals.revenue.toLocaleString()}</b></span>}
@@ -377,7 +444,7 @@ export default function OLAPExplorer() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.cells.map((cell, idx) => (
+                    {data?.cells?.map((cell, idx) => (
                       <tr key={idx}>
                         {selectedDims.map((dim) => (
                           <td key={dim}><b>{cell[dim] || '—'}</b></td>
@@ -408,8 +475,19 @@ export default function OLAPExplorer() {
             </div>
           )}
         </div>
-      ) : (
-        /* ETL Runs History & Quality Checks */
+      )}
+
+      {/* Tab 2: 2D Pivot Heatmap Matrix */}
+      {activeTab === 'pivot_heatmap' && <OLAPPivotHeatmap />}
+
+      {/* Tab 3: Snowflake Hierarchy Drill-Down Tree */}
+      {activeTab === 'snowflake_tree' && <SnowflakeHierarchyTree />}
+
+      {/* Tab 4: Interactive Schema Architecture Visualizer */}
+      {activeTab === 'schema_visualizer' && <SchemaVisualizer />}
+
+      {/* Tab 5: ETL Runs History & Quality Checks */}
+      {activeTab === 'etl_history' && (
         <div className="card">
           <div className="card-header">
             <span className="card-title">

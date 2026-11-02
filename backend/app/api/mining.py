@@ -63,3 +63,22 @@ def get_model_registry():
         mining_engine.train_shortage_classifier()
         res = rows(db.table("model_registry").select("*").order("trained_at", desc=True).execute())
     return res
+
+@router.get("/all")
+def get_all_data_mining_models():
+    """Returns all data mining models and results in a single aggregated payload."""
+    rules = mining_engine.mine_association_rules()
+    surges = mining_engine.detect_demand_surges()
+    clusters = mining_engine.cluster_pharmacies()
+    suppliers = mining_engine.score_supplier_reliability()
+    clf_metrics = mining_engine.train_shortage_classifier()
+    registry = rows(db.table("model_registry").select("*").order("trained_at", desc=True).execute())
+    return {
+        "association_rules": rules,
+        "outbreak_surges": surges,
+        "risk_classifier": clf_metrics,
+        "pharmacy_clusters": clusters,
+        "supplier_reliability": suppliers,
+        "model_registry": registry
+    }
+

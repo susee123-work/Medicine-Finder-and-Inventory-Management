@@ -24,3 +24,4 @@ describe('RiskBadge component', () => {
     expect(html).toContain('Low Risk');
   });
 });
+

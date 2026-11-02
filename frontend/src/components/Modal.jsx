@@ -48,3 +48,4 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 580
     </div>
   );
 }
+

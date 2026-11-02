@@ -82,6 +82,7 @@ class IncrementalETL:
                 "rows_extracted": total_loaded + total_rejected,
                 "rows_transformed": total_loaded,
                 "rows_loaded": total_loaded,
+                "rows_processed": total_loaded,
                 "rows_rejected": total_rejected,
                 "quality_checks_passed": total_checks_passed,
                 "quality_checks_failed": total_checks_failed,
@@ -317,6 +318,37 @@ class IncrementalETL:
             ]
             db.table("snow_dim_atc_level1").insert(l1).execute()
 
+            l2 = [
+                {"atc_level2_id": "A02", "atc_level1_id": "A", "therapeutic_subgroup": "Drugs for acid related disorders"},
+                {"atc_level2_id": "A10", "atc_level1_id": "A", "therapeutic_subgroup": "Drugs used in diabetes"},
+                {"atc_level2_id": "C09", "atc_level1_id": "C", "therapeutic_subgroup": "Agents acting on renin-angiotensin system"},
+                {"atc_level2_id": "C10", "atc_level1_id": "C", "therapeutic_subgroup": "Lipid modifying agents"},
+                {"atc_level2_id": "J01", "atc_level1_id": "J", "therapeutic_subgroup": "Antibacterials for systemic use"},
+                {"atc_level2_id": "N02", "atc_level1_id": "N", "therapeutic_subgroup": "Analgesics and antipyretics"},
+                {"atc_level2_id": "R03", "atc_level1_id": "R", "therapeutic_subgroup": "Drugs for obstructive airway diseases"}
+            ]
+            db.table("snow_dim_atc_level2").insert(l2).execute()
+
+            l3 = [
+                {"atc_level3_id": "A02B", "atc_level2_id": "A02", "pharmacological_subgroup": "Proton pump inhibitors"},
+                {"atc_level3_id": "A10B", "atc_level2_id": "A10", "pharmacological_subgroup": "Oral blood glucose lowering drugs"},
+                {"atc_level3_id": "C09A", "atc_level2_id": "C09", "pharmacological_subgroup": "ACE inhibitors"},
+                {"atc_level3_id": "C10A", "atc_level2_id": "C10", "pharmacological_subgroup": "HMG CoA reductase inhibitors"},
+                {"atc_level3_id": "J01C", "atc_level2_id": "J01", "pharmacological_subgroup": "Beta-lactam antibacterials"},
+                {"atc_level3_id": "N02B", "atc_level2_id": "N02", "pharmacological_subgroup": "Other analgesics and antipyretics"},
+                {"atc_level3_id": "R03A", "atc_level2_id": "R03", "pharmacological_subgroup": "Adrenergics, inhalants"}
+            ]
+            db.table("snow_dim_atc_level3").insert(l3).execute()
+
+            forms = [
+                {"dosage_form_id": 1, "form_name": "Tablet", "route_of_administration": "Oral"},
+                {"dosage_form_id": 2, "form_name": "Capsule", "route_of_administration": "Oral"},
+                {"dosage_form_id": 3, "form_name": "Syrup", "route_of_administration": "Oral"},
+                {"dosage_form_id": 4, "form_name": "Inhaler", "route_of_administration": "Inhalation"},
+                {"dosage_form_id": 5, "form_name": "Injection", "route_of_administration": "Parenteral"}
+            ]
+            db.table("snow_dim_dosage_form").insert(forms).execute()
+
         for m in meds:
             mid = m["id"]
             current = rows(
@@ -453,8 +485,20 @@ class IncrementalETL:
             })
 
         db.table("star_fact_daily_sales").delete().execute()
+        db.table("snow_fact_daily_sales").delete().execute()
         if fact_rows:
             db.table("star_fact_daily_sales").insert(fact_rows).execute()
+            snow_rows = [{
+                "date_key": r["date_key"],
+                "pharmacy_key": r["pharmacy_key"],
+                "medicine_key": r["medicine_key"],
+                "locality_id": 1,
+                "dosage_form_id": 1,
+                "units_sold": r["units_sold"],
+                "net_revenue": r["net_revenue"],
+                "transaction_count": r["transaction_count"]
+            } for r in fact_rows]
+            db.table("snow_fact_daily_sales").insert(snow_rows).execute()
 
         return len(fact_rows), rejected, checks_pass, checks_fail
 

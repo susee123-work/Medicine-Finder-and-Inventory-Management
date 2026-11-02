@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Boxes,
   Plus,
   Upload,
   QrCode,
   CheckCircle2,
-  Clock,
-  AlertTriangle,
   ShoppingCart,
-  FileSpreadsheet,
-  Truck,
   Check
 } from 'lucide-react';
-import { api, getStoredUser } from '../api/client';
+import { api } from '../api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import BarcodeScannerModal from '../components/BarcodeScannerModal';
 import * as XLSX from 'xlsx';
@@ -724,3 +718,4 @@ export default function InventoryManager() {
     </div>
   );
 }
+

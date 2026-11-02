@@ -37,3 +37,4 @@ export default function KPICard({ title, value, subtext, icon: Icon, trend, tren
     </div>
   );
 }
+

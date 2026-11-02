@@ -93,3 +93,4 @@ def send_daily_digest(pharmacy_id: str):
         "status": "SENT",
         "result": res
     }
+

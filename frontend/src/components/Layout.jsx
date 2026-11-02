@@ -15,7 +15,7 @@ import {
   ChevronDown,
   UserCheck
 } from 'lucide-react';
-import { api, getStoredToken, setStoredToken, getStoredUser, setStoredUser, clearAuth } from '../api/client';
+import { api, getStoredToken, setStoredToken, getStoredUser, setStoredUser } from '../api/client';
 import ErrorBoundary from './ErrorBoundary';
 
 export default function Layout({ activeTab, onTabChange, children }) {
@@ -255,3 +255,4 @@ export default function Layout({ activeTab, onTabChange, children }) {
     </div>
   );
 }
+

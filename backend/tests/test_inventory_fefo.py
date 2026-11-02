@@ -84,3 +84,4 @@ def test_manual_verification_bump(client):
     resp = client.patch(f"/inventory/verify/{batch_id}")
     assert resp.status_code == 200
     assert resp.json()["verified_at"] is not None
+

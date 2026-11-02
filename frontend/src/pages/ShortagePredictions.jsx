@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   TrendingDown,
-  ShieldAlert,
-  Calendar,
-  AlertTriangle,
-  Info,
   ChevronRight,
-  RefreshCw,
-  Clock,
-  Sparkles
+  RefreshCw
 } from 'lucide-react';
 import { api } from '../api/client';
 import RiskBadge from '../components/RiskBadge';
@@ -68,6 +62,7 @@ export default function ShortagePredictions() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [horizon]);
 
   const handlePharmacyChange = (e) => {
@@ -329,3 +324,4 @@ export default function ShortagePredictions() {
     </div>
   );
 }
+

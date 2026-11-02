@@ -30,7 +30,7 @@ def get_cluster_averages() -> Dict[int, float]:
 
 @router.get("/shortages")
 def get_shortage_predictions(
-    pharmacy_id: str = Query(..., description="Pharmacy UUID"),
+    pharmacy_id: Optional[str] = Query(None, description="Pharmacy UUID"),
     horizon_days: int = Query(7, ge=1, le=30),
     user = Depends(get_current_user_optional)
 ):
@@ -39,6 +39,16 @@ def get_shortage_predictions(
     Integrates day-of-week seasonality, Holt-Winters / Ridge forecasting,
     confidence intervals, lead-time variance safety stock, and 0-100 risk scores.
     """
+    if not pharmacy_id:
+        if user and user.pharmacy_id:
+            pharmacy_id = user.pharmacy_id
+        else:
+            first_p = rows(db.table("pharmacies").select("id").limit(1).execute())
+            if first_p:
+                pharmacy_id = first_p[0]["id"]
+            else:
+                return []
+
     # Fetch current inventory batches
     inv_rows = rows(
         db.table("inventory")
@@ -138,6 +148,7 @@ def get_shortage_predictions(
         results.append({
             "medicine_id": mid,
             "medicine": meta.get("name"),
+            "medicine_name": meta.get("name"),
             "generic_name": meta.get("generic_name"),
             "category": meta.get("category"),
             "stock": total_stock,
@@ -145,6 +156,7 @@ def get_shortage_predictions(
             "days_cover": round(days_of_cover, 1) if days_of_cover < 999 else 999.0,
             "lead_time_days": lead_time,
             "safety_stock": safety_stock,
+            "recommended_safety_stock": safety_stock,
             "reorder_point": int(math.ceil(reorder_point)),
             "reorder_now": total_stock <= reorder_point,
             "suggested_order_qty": suggested_order_qty,
@@ -167,10 +179,17 @@ def get_shortage_predictions(
 @router.get("/detail/{medicine_id}")
 def get_prediction_detail(
     medicine_id: str,
-    pharmacy_id: str = Query(..., description="Pharmacy UUID"),
+    pharmacy_id: Optional[str] = Query(None, description="Pharmacy UUID"),
     horizon_days: int = Query(7, ge=1, le=14)
 ):
     """Return in-depth forecast diagnostics, confidence intervals, and daily history for a medicine."""
+    if not pharmacy_id:
+        first_p = rows(db.table("pharmacies").select("id").limit(1).execute())
+        if first_p:
+            pharmacy_id = first_p[0]["id"]
+        else:
+            raise HTTPException(404, "No pharmacies found")
+
     med_res = rows(db.table("medicines").select("*, suppliers(*)").eq("id", medicine_id).execute())
     if not med_res:
         raise HTTPException(404, "Medicine not found")
@@ -241,3 +260,4 @@ def get_prediction_detail(
             for i in range(horizon_days)
         ]
     }
+

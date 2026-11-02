@@ -116,3 +116,4 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanComplete })
     </Modal>
   );
 }
+

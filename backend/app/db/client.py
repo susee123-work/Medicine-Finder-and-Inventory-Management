@@ -44,3 +44,4 @@ def rows(result: Any) -> List[Dict[str, Any]]:
     return [result]
 
 db = get_db()
+

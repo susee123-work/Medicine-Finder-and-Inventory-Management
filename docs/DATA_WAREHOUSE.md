@@ -158,3 +158,4 @@ The analytical engine executes multidimensional analysis utilizing SQL-99 OLAP e
    - K-Means ($k=3..5$) grouping pharmacies into operational profiles: High-Volume Urban, Moderate Suburban, and Low-Stock High-Risk Outlier pharmacies.
 5. **Supplier Reliability Scoring**:
    - Weighted composite index computed from on-time delivery rate, fill rate, and lead-time standard deviation.
+

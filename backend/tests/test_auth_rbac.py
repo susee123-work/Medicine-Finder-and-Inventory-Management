@@ -58,3 +58,4 @@ def test_demo_tokens_endpoint(client):
     assert "pharmacy_staff" in roles
     assert "health_official" in roles
     assert "patient" in roles
+

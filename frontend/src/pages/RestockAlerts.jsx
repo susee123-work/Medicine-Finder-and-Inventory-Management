@@ -3,11 +3,7 @@ import {
   Bell,
   Mail,
   Send,
-  Eye,
-  CheckCircle2,
-  Calendar,
-  AlertTriangle,
-  Building2
+  CheckCircle2
 } from 'lucide-react';
 import { api } from '../api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -65,6 +61,7 @@ export default function RestockAlerts() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSubscribe = async (e) => {
@@ -272,3 +269,4 @@ export default function RestockAlerts() {
     </div>
   );
 }
+
