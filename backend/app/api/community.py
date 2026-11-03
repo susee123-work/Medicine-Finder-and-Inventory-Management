@@ -1,21 +1,51 @@
+import time
 from datetime import datetime, timedelta, timezone, date
 from collections import defaultdict
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends
 from backend.app.db.client import db, rows
-from backend.app.api.predictions import get_shortage_predictions
 from backend.app.core.auth import get_current_user_optional
 
 router = APIRouter(prefix="/analytics/community", tags=["Community Analytics"])
+
+_COMMUNITY_CACHE = {"expires_at": 0, "payload": None}
 
 @router.get("")
 def get_community_analytics(user = Depends(get_current_user_optional)):
     """
     Returns multi-pharmacy community shortage signals, supplier latency tracking,
     epidemic sales trends, and regional area risk heat maps.
+    Optimized with direct vectorized stock-to-demand evaluation and 60-second in-memory caching.
     """
+    global _COMMUNITY_CACHE
+    now_ts = time.time()
+    if _COMMUNITY_CACHE["payload"] and now_ts < _COMMUNITY_CACHE["expires_at"]:
+        return _COMMUNITY_CACHE["payload"]
+
     pharms = rows(db.table("pharmacies").select("id, name, city, district").execute())
     total_pharms = max(len(pharms), 1)
+
+    # Fetch medicines catalogue
+    all_meds = rows(db.table("medicines").select("id, name, cluster_group, therapeutic_category").execute())
+    med_map = {m["id"]: m for m in all_meds}
+
+    # Fetch all inventory batches in 1 single fast query
+    inv_rows = rows(db.table("inventory").select("pharmacy_id, medicine_id, quantity").execute())
+    stock_map = defaultdict(int)
+    for inv in inv_rows:
+        pid = inv.get("pharmacy_id")
+        mid = inv.get("medicine_id")
+        qty = int(inv.get("quantity") or 0)
+        stock_map[(pid, mid)] += qty
+
+    # Fetch 30-day sales history in 1 query to compute average daily demand
+    since_30 = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    sales_rows = rows(db.table("sales").select("medicine_id, quantity").gte("sold_at", since_30).execute())
+    med_sales_totals = defaultdict(int)
+    for s in sales_rows:
+        med_sales_totals[s["medicine_id"]] += int(s.get("quantity") or 0)
+
+    daily_rates = {mid: max(0.5, round(tot / 30.0 / total_pharms, 2)) for mid, tot in med_sales_totals.items()}
 
     # 1. Multi-pharmacy shortage convergence
     med_risk_map = defaultdict(lambda: {"pharmacies": [], "critical_count": 0, "high_count": 0})
@@ -25,18 +55,24 @@ def get_community_analytics(user = Depends(get_current_user_optional)):
         pid = p["id"]
         pname = p["name"]
         pcity = p.get("city") or "Chennai"
-        
-        preds = get_shortage_predictions(pharmacy_id=pid, horizon_days=7)
-        for r in preds:
-            if r["risk_level"] in ("HIGH", "CRITICAL"):
-                med_name = r["medicine"]
+
+        for mid, m in med_map.items():
+            stock = stock_map.get((pid, mid), 0)
+            demand_rate = daily_rates.get(mid, 2.5)
+            days_of_cover = (stock / demand_rate) if demand_rate > 0 else 999.0
+
+            if days_of_cover <= 4.0 or stock <= 5:
+                med_name = m["name"]
                 entry = med_risk_map[med_name]
                 entry["pharmacies"].append(pname)
-                if r["risk_level"] == "CRITICAL":
-                    entry["critical_count"] += 1
-                else:
-                    entry["high_count"] += 1
-                    
+                entry["critical_count"] += 1
+                city_risk_map[pcity]["at_risk_meds"].add(med_name)
+                city_risk_map[pcity]["pharmacies"].add(pname)
+            elif days_of_cover <= 8.0:
+                med_name = m["name"]
+                entry = med_risk_map[med_name]
+                entry["pharmacies"].append(pname)
+                entry["high_count"] += 1
                 city_risk_map[pcity]["at_risk_meds"].add(med_name)
                 city_risk_map[pcity]["pharmacies"].add(pname)
 
@@ -108,13 +144,15 @@ def get_community_analytics(user = Depends(get_current_user_optional)):
         })
     area_heatmap.sort(key=lambda x: -x["risk_index"])
 
-    return {
+    payload = {
         "pharmacies_count": len(pharms),
         "local_shortages": local_shortages,
         "supplier_delays": supplier_delays,
         "sales_trend": [{"date": k, "units": v} for k, v in sorted(trend.items())],
         "area_risk_heatmap": area_heatmap
     }
+    _COMMUNITY_CACHE = {"expires_at": time.time() + 60, "payload": payload}
+    return payload
 
 @router.get("/heatmap")
 def get_regional_heatmap():

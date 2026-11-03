@@ -217,6 +217,7 @@ class IncrementalETL:
             post = p.get("postal_code") or "600001"
 
             areas.append({
+                "area_key": len(areas) + 1,
                 "locality": loc,
                 "city": city,
                 "district": dist,
@@ -260,6 +261,7 @@ class IncrementalETL:
             if not current:
                 # Insert initial version
                 record = {
+                    "pharmacy_key": count + 1,
                     "pharmacy_id": pid,
                     "name": p["name"],
                     "license_number": p.get("license_number"),
@@ -364,6 +366,7 @@ class IncrementalETL:
 
             if not current:
                 record = {
+                    "medicine_key": count + 1,
                     "medicine_id": mid,
                     "name": m["name"],
                     "generic_name": m.get("generic_name") or m["name"],
@@ -411,6 +414,7 @@ class IncrementalETL:
             if not existing:
                 rel = "High (>95%)" if float(s.get("reliability_score") or 90) >= 90 else "Medium (80-95%)"
                 db.table("star_dim_supplier").insert({
+                    "supplier_key": count + 1,
                     "supplier_id": sid,
                     "name": s["name"],
                     "contact_name": s.get("contact_name"),

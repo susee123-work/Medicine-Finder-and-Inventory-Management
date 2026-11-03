@@ -25,8 +25,21 @@ export default function SchemaVisualizer() {
     loadMeta();
   }, []);
 
-  if (loading || !metadata) {
+  if (loading) {
     return <LoadingSkeleton height={300} count={2} />;
+  }
+
+  if (!metadata) {
+    return (
+      <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 12 }}>
+          Could not load schema architecture metadata.
+        </p>
+        <button onClick={() => window.location.reload()} className="btn btn-primary btn-sm">
+          Refresh Page
+        </button>
+      </div>
+    );
   }
 
   const currentSchema = metadata[schemaType];

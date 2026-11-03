@@ -127,3 +127,8 @@ def get_pivot_matrix(
         schema_type=schema_type
     )
 
+@router.get("/cube-3d")
+def get_cube_3d_tensor():
+    """Returns 3D OLAP tensor data across Time × Geography × Product Category for 3D visualization."""
+    return olap_engine.get_cube_3d()
+

@@ -61,8 +61,21 @@ export default function SnowflakeHierarchyTree() {
     setExpandedNodes({});
   };
 
-  if (loading || !hierarchies) {
+  if (loading) {
     return <LoadingSkeleton height={60} count={6} />;
+  }
+
+  if (!hierarchies) {
+    return (
+      <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 12 }}>
+          Could not load snowflake hierarchy trees.
+        </p>
+        <button onClick={() => window.location.reload()} className="btn btn-primary btn-sm">
+          Refresh Page
+        </button>
+      </div>
+    );
   }
 
   const currentTree =

@@ -7,7 +7,8 @@ import {
   FileSpreadsheet,
   Grid,
   GitBranch,
-  Play
+  Play,
+  Box
 } from 'lucide-react';
 import { api } from '../api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -15,6 +16,7 @@ import EmptyState from '../components/EmptyState';
 import SchemaVisualizer from '../components/SchemaVisualizer';
 import SnowflakeHierarchyTree from '../components/SnowflakeHierarchyTree';
 import OLAPPivotHeatmap from '../components/OLAPPivotHeatmap';
+import OLAP3DCube from '../components/OLAP3DCube';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -243,6 +245,26 @@ export default function OLAPExplorer() {
           }}
         >
           <Layers size={16} /> Cube Slice & Dice
+        </button>
+
+        <button
+          onClick={() => setActiveTab('cube_3d')}
+          style={{
+            padding: '10px 16px',
+            border: 'none',
+            borderBottom: activeTab === 'cube_3d' ? '2px solid var(--primary)' : '2px solid transparent',
+            background: 'transparent',
+            color: activeTab === 'cube_3d' ? 'var(--primary)' : 'var(--text-secondary)',
+            fontWeight: 600,
+            fontSize: 13,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <Box size={16} /> 🧊 3D OLAP Cube
         </button>
 
         <button
@@ -476,6 +498,9 @@ export default function OLAPExplorer() {
           )}
         </div>
       )}
+
+      {/* Tab 1b: 3D OLAP Cube Visualizer */}
+      {activeTab === 'cube_3d' && <OLAP3DCube />}
 
       {/* Tab 2: 2D Pivot Heatmap Matrix */}
       {activeTab === 'pivot_heatmap' && <OLAPPivotHeatmap />}

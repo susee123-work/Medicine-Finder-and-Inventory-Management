@@ -164,8 +164,23 @@ export default function OLAPPivotHeatmap() {
         </div>
       </div>
 
-      {loading || !pivotData ? (
+      {loading ? (
         <LoadingSkeleton height={320} count={1} />
+      ) : !pivotData || !pivotData.row_headers || pivotData.row_headers.length === 0 ? (
+        <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 12 }}>
+            No aggregated cells found for the selected dimensional axes.
+          </p>
+          <button
+            onClick={() => {
+              setRowDim('therapeutic_category');
+              setColDim('quarter_name');
+            }}
+            className="btn btn-primary btn-sm"
+          >
+            Reset Dimensions
+          </button>
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Heatmap Matrix Table */}
