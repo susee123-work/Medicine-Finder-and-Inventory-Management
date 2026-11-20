@@ -7,9 +7,11 @@ import {
   Building2,
   RefreshCw,
   MapPin,
-  Flame
+  Flame,
+  Radio
 } from 'lucide-react';
 import { api } from '../api/client';
+import { useLiveEvents, useLiveSocket } from '../hooks/useLiveSocket';
 import KPICard from '../components/KPICard';
 import RiskBadge from '../components/RiskBadge';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -42,23 +44,34 @@ export default function DashboardOverview({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
+  const { status: wsStatus } = useLiveSocket();
 
-  const fetchAnalytics = async () => {
-    setLoading(true);
+  const fetchAnalytics = async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await api.community.get();
       setData(res);
+      setLastSyncedAt(new Date());
     } catch (err) {
       setError(err.message || 'Failed to load community analytics');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchAnalytics();
   }, []);
+
+  // Auto-refresh live dashboard whenever backend broadcasts stock, sale, delivery or ETL events
+  useLiveEvents(
+    ['SALE_RECORDED', 'INVENTORY_UPDATED', 'INVENTORY_BULK_IMPORTED', 'DELIVERY_RECEIVED', 'ETL_COMPLETED'],
+    () => {
+      fetchAnalytics(true);
+    }
+  );
 
   if (loading) {
     return (
@@ -125,16 +138,33 @@ export default function DashboardOverview({ onNavigate }) {
   return (
     <div>
       {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-            Executive Shortage Intelligence Overview
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+              Executive Shortage Intelligence Overview
+            </h2>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              fontSize: 11,
+              fontWeight: 700,
+              padding: '3px 9px',
+              borderRadius: 999,
+              background: wsStatus === 'connected' ? 'var(--low-bg)' : 'var(--medium-bg)',
+              color: wsStatus === 'connected' ? 'var(--low)' : 'var(--high)',
+            }}>
+              <Radio size={12} />
+              {wsStatus === 'connected' ? 'WebSocket Live' : 'Syncing…'}
+            </span>
+          </div>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
-            Real-time surveillance across {data?.pharmacies_count || 20} regional community pharmacies in Tamil Nadu.
+            Real-time surveillance across {data?.pharmacies_count ?? 0} community pharmacies
+            {lastSyncedAt ? ` • Synced ${lastSyncedAt.toLocaleTimeString()}` : ''}.
           </p>
         </div>
-        <button className="btn btn-secondary btn-sm" onClick={fetchAnalytics}>
+        <button className="btn btn-secondary btn-sm" onClick={() => fetchAnalytics(false)}>
           <RefreshCw size={14} /> Refresh Surveillance
         </button>
       </div>
@@ -142,11 +172,11 @@ export default function DashboardOverview({ onNavigate }) {
       {/* KPI Cards */}
       <div className="grid-cols-4">
         <KPICard
-          title="Pharmacies Survailed"
-          value={data?.pharmacies_count || 20}
-          subtext="Active in network"
+          title="Pharmacies Monitored"
+          value={data?.pharmacies_count ?? 0}
+          subtext="Active in live network"
           icon={Building2}
-          trend="+100%"
+          trend={wsStatus === 'connected' ? 'Live WS' : 'Synced'}
           trendColor="var(--primary)"
         />
         <KPICard

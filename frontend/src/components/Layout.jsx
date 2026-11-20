@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   LayoutDashboard,
   Boxes,
@@ -10,53 +10,52 @@ import {
   Sun,
   Moon,
   Activity,
-  ShieldCheck,
   Building2,
-  ChevronDown,
-  UserCheck
+  LogOut,
+  Radio,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
-import { api, getStoredToken, setStoredToken, getStoredUser, setStoredUser } from '../api/client';
 import ErrorBoundary from './ErrorBoundary';
+import { useLiveSocket } from '../hooks/useLiveSocket';
 
-export default function Layout({ activeTab, onTabChange, children }) {
-  const [theme, setTheme] = useState(localStorage.getItem('medipulse_theme') || 'light');
-  const [currentUser, setCurrentUser] = useState(getStoredUser() || { role: 'pharmacy_admin', full_name: 'Dr. Sarah Chen' });
-  const [demoTokens, setDemoTokens] = useState([]);
-  const [showRoleMenu, setShowRoleMenu] = useState(false);
-  const [pharmacyName, setPharmacyName] = useState('Apollo Pharmacy Main Branch');
+const ROLE_COLOR = {
+  pharmacy_admin: '#D95D39',
+  pharmacy_staff: '#0D9468',
+  health_official: '#C27803',
+  patient: '#EA580C',
+};
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('medipulse_theme', theme);
-  }, [theme]);
+const ROLE_LABEL = {
+  pharmacy_admin: 'Pharmacy Admin',
+  pharmacy_staff: 'Pharmacy Staff',
+  health_official: 'Health Official',
+  patient: 'Patient',
+};
 
-  useEffect(() => {
-    // Load demo tokens for role switcher
-    api.auth.getDemoTokens()
-      .then((tokens) => {
-        setDemoTokens(tokens);
-        if (!getStoredToken() && tokens.length > 0) {
-          const adminTok = tokens.find((t) => t.role === 'pharmacy_admin') || tokens[0];
-          setStoredToken(adminTok.access_token);
-          setStoredUser(adminTok);
-          setCurrentUser(adminTok);
-          if (adminTok.pharmacy_name) setPharmacyName(adminTok.pharmacy_name);
-        }
-      })
-      .catch((err) => console.warn('Could not load demo tokens:', err));
-  }, []);
+export default function Layout({ activeTab, onTabChange, children, currentUser, onLogout }) {
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('medipulse_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    return saved;
+  });
+  const [showLiveFeed, setShowLiveFeed] = useState(false);
+
+  const { status: wsStatus, clientsCount, liveMetrics, eventFeed } = useLiveSocket();
+  const isConnected = wsStatus === 'connected';
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    setTheme((prev) => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('medipulse_theme', next);
+      return next;
+    });
   };
 
-  const handleSwitchRole = (tokenItem) => {
-    setStoredToken(tokenItem.access_token);
-    setStoredUser(tokenItem);
-    setCurrentUser(tokenItem);
-    if (tokenItem.pharmacy_name) setPharmacyName(tokenItem.pharmacy_name);
-    setShowRoleMenu(false);
-  };
+  const role = currentUser?.role || 'patient';
+  const accent = ROLE_COLOR[role] || '#D95D39';
+  const pharmacyName = currentUser?.pharmacy_name;
 
   const navItems = [
     { id: 'overview', label: 'Overview & KPIs', icon: LayoutDashboard },
@@ -65,11 +64,11 @@ export default function Layout({ activeTab, onTabChange, children }) {
     { id: 'olap', label: 'OLAP Warehouse', icon: Database, roles: ['pharmacy_admin', 'health_official'] },
     { id: 'mining', label: 'Data Mining Studio', icon: BrainCircuit, roles: ['pharmacy_admin', 'health_official'] },
     { id: 'finder', label: 'Patient Medicine Finder', icon: Search },
-    { id: 'alerts', label: 'Restock Alerts & Digest', icon: Bell }
+    { id: 'alerts', label: 'Restock Alerts & Digest', icon: Bell },
   ];
 
   const visibleNavItems = navItems.filter(
-    (item) => !item.roles || item.roles.includes(currentUser?.role || 'patient')
+    (item) => !item.roles || item.roles.includes(role)
   );
 
   return (
@@ -82,31 +81,54 @@ export default function Layout({ activeTab, onTabChange, children }) {
               width: 36,
               height: 36,
               borderRadius: 8,
-              background: 'var(--primary)',
+              background: accent,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ffffff'
+              color: '#ffffff',
             }}>
               <Activity size={22} />
             </div>
             <div>
               <h1 style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.5, color: '#ffffff', margin: 0 }}>
-                MediPulse <span style={{ color: 'var(--primary)' }}>AI</span>
+                MediPulse <span style={{ color: accent }}>AI</span>
               </h1>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Warehouse & Mining Intel</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Warehouse &amp; Mining Intel</span>
             </div>
           </div>
         </div>
 
+        {/* Role badge */}
+        <div style={{
+          padding: '10px 20px',
+          background: accent + '18',
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          <span style={{
+            fontSize: 10,
+            fontWeight: 700,
+            padding: '2px 8px',
+            borderRadius: 20,
+            background: accent + '30',
+            color: accent,
+            textTransform: 'uppercase',
+            letterSpacing: 0.6,
+          }}>
+            {ROLE_LABEL[role] || role}
+          </span>
+        </div>
+
         {/* Pharmacy context */}
-        {pharmacyName && currentUser.role !== 'patient' && currentUser.role !== 'health_official' && (
+        {pharmacyName && role !== 'patient' && role !== 'health_official' && (
           <div style={{ padding: '12px 20px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
             <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--text-muted)' }}>
               Assigned Pharmacy
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, color: 'var(--text-on-dark)', fontSize: 13, fontWeight: 500 }}>
-              <Building2 size={14} style={{ color: 'var(--primary)' }} />
+              <Building2 size={14} style={{ color: accent }} />
               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {pharmacyName}
               </span>
@@ -135,8 +157,8 @@ export default function Layout({ activeTab, onTabChange, children }) {
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'all 0.15s ease',
-                  background: isActive ? 'var(--primary)' : 'transparent',
-                  color: isActive ? '#ffffff' : 'var(--text-muted)'
+                  background: isActive ? accent : 'transparent',
+                  color: isActive ? '#ffffff' : 'var(--text-muted)',
                 }}
               >
                 <Icon size={18} />
@@ -146,12 +168,35 @@ export default function Layout({ activeTab, onTabChange, children }) {
           })}
         </nav>
 
-        {/* System Status pill */}
-        <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 12, color: 'var(--text-muted)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e' }}></span>
-            <span>FastAPI + Supabase DW Live</span>
+        {/* Live WebSocket Status Pill (Dynamic, not static!) */}
+        <div style={{ padding: '14px 18px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 12, color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: isConnected ? '#22c55e' : '#f59e0b',
+                boxShadow: isConnected ? '0 0 8px #22c55e' : 'none',
+                display: 'inline-block',
+              }} />
+              <span style={{ color: isConnected ? '#e2e8f0' : '#fbbf24', fontWeight: 600 }}>
+                {isConnected ? 'WebSocket Live' : 'Reconnecting…'}
+              </span>
+            </div>
+            {isConnected && (
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                {clientsCount} online
+              </span>
+            )}
           </div>
+          {liveMetrics && (
+            <div style={{ fontSize: 11, color: '#94a3b8', display: 'flex', gap: 10 }}>
+              <span>{liveMetrics.batches} batches</span>
+              <span>•</span>
+              <span>{liveMetrics.sales} sales</span>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -160,69 +205,133 @@ export default function Layout({ activeTab, onTabChange, children }) {
         {/* Top Navbar */}
         <header className="top-navbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Operating Mode:</span>
-            {/* Role Switcher Pill */}
-            <div style={{ position: 'relative' }}>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => setShowRoleMenu((v) => !v)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}
-              >
-                <ShieldCheck size={16} style={{ color: 'var(--primary)' }} />
-                <span>Role: {currentUser?.role?.replace('_', ' ').toUpperCase()}</span>
-                <ChevronDown size={14} />
-              </button>
-
-              {showRoleMenu && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  marginTop: 6,
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-md)',
-                  boxShadow: 'var(--shadow-md)',
-                  minWidth: 240,
-                  zIndex: 200,
-                  padding: 6
-                }}>
-                  <div style={{ padding: '6px 10px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                    Switch Demo Persona
-                  </div>
-                  {demoTokens.map((t) => (
-                    <button
-                      key={t.role}
-                      onClick={() => handleSwitchRole(t)}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '8px 10px',
-                        background: currentUser.role === t.role ? 'var(--primary-light)' : 'transparent',
-                        color: currentUser.role === t.role ? 'var(--primary)' : 'var(--text-primary)',
-                        border: 'none',
-                        borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        textAlign: 'left'
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{t.role.replace('_', ' ').toUpperCase()}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t.name}</div>
-                      </div>
-                      {currentUser.role === t.role && <UserCheck size={16} />}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <span style={{
+              fontSize: 11,
+              fontWeight: 700,
+              padding: '3px 10px',
+              borderRadius: 20,
+              background: accent + '20',
+              color: accent,
+              textTransform: 'uppercase',
+              letterSpacing: 0.6,
+              border: `1px solid ${accent}40`,
+            }}>
+              {ROLE_LABEL[role] || role} Portal
+            </span>
           </div>
 
           {/* Right controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
+            {/* Real-Time WebSocket Event Feed Button */}
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setShowLiveFeed((v) => !v)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '6px 10px',
+                  cursor: 'pointer',
+                  color: isConnected ? 'var(--text-primary)' : '#f59e0b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+                title="Live WebSocket activity stream"
+              >
+                {isConnected ? <Wifi size={15} color="#22c55e" /> : <WifiOff size={15} color="#f59e0b" />}
+                <span>Live Feed</span>
+                {eventFeed.length > 0 && (
+                  <span style={{
+                    background: accent,
+                    color: '#fff',
+                    borderRadius: 999,
+                    padding: '1px 6px',
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}>
+                    {eventFeed.length}
+                  </span>
+                )}
+              </button>
+
+              {showLiveFeed && (
+                <div style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 8px)',
+                  width: 340,
+                  maxHeight: 380,
+                  overflowY: 'auto',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: 'var(--shadow-lg)',
+                  zIndex: 300,
+                  padding: 12,
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingBottom: 8,
+                    marginBottom: 8,
+                    borderBottom: '1px solid var(--border)',
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Radio size={14} color={isConnected ? '#22c55e' : '#f59e0b'} />
+                      Real-Time Event Stream
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
+                      {isConnected ? `${clientsCount} connected` : 'Offline'}
+                    </span>
+                  </div>
+
+                  {eventFeed.length === 0 ? (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '18px 8px' }}>
+                      Listening for live inventory, sales, delivery &amp; ETL events…
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {eventFeed.slice(0, 12).map((ev, idx) => (
+                        <div
+                          key={`${ev.timestamp}-${idx}`}
+                          style={{
+                            padding: '8px 10px',
+                            borderRadius: 8,
+                            background: 'var(--bg-surface-hover)',
+                            borderLeft: `3px solid ${accent}`,
+                            fontSize: 12,
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
+                            <span style={{ fontWeight: 700, fontSize: 10.5, color: accent }}>
+                              {ev.type.replace(/_/g, ' ')}
+                            </span>
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                              {new Date(ev.timestamp).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          <div style={{ color: 'var(--text-primary)' }}>
+                            {ev.summary || 'Live state synchronized'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+              {currentUser?.full_name || currentUser?.name || 'User'}
+            </div>
+
             <button
               onClick={toggleTheme}
               aria-label="Toggle dark/light theme"
@@ -234,14 +343,31 @@ export default function Layout({ activeTab, onTabChange, children }) {
                 cursor: 'pointer',
                 color: 'var(--text-primary)',
                 display: 'flex',
-                alignItems: 'center'
+                alignItems: 'center',
               }}
             >
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </button>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
-              {currentUser?.name || currentUser?.full_name || 'User'}
-            </div>
+
+            <button
+              onClick={onLogout}
+              title="Sign out"
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '6px 10px',
+                cursor: 'pointer',
+                color: '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: 13,
+              }}
+            >
+              <LogOut size={16} />
+              <span>Sign Out</span>
+            </button>
           </div>
         </header>
 
@@ -255,4 +381,3 @@ export default function Layout({ activeTab, onTabChange, children }) {
     </div>
   );
 }
-

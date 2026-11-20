@@ -5,6 +5,7 @@ from backend.app.models.schemas import RestockSubIn
 from backend.app.services.notifications import notification_service
 from backend.app.api.predictions import get_shortage_predictions
 from backend.app.core.auth import get_current_user_optional
+from backend.app.core.websocket import ws_manager
 
 router = APIRouter(prefix="/alerts", tags=["Alerts & Notifications"])
 
@@ -24,6 +25,12 @@ def subscribe_to_restock_alert(sub: RestockSubIn):
         to_email=sub.patient_email,
         subject=f"MediPulse Alert: Subscribed to restock alerts for {med[0]['name']}",
         html_content=f"<p>Hello,</p><p>You have successfully subscribed to restock notifications for <b>{med[0]['name']}</b>. We will alert you immediately when fresh stock arrives.</p>"
+    )
+
+    ws_manager.broadcast_sync(
+        "SUBSCRIPTION_CREATED",
+        {"subscription_id": inserted["id"], "medicine_id": sub.medicine_id, "medicine": med[0]["name"]},
+        f"New restock alert subscription for {med[0]['name']}",
     )
 
     return {
@@ -81,16 +88,23 @@ def preview_daily_digest(pharmacy_id: str):
     }
 
 @router.post("/digest/send")
-def send_daily_digest(pharmacy_id: str):
+def send_daily_digest(pharmacy_id: str, to_email: Optional[str] = Query(None, description="Optional override recipient email")):
     """Trigger dispatch of the daily stockout & expiry digest email to pharmacy staff."""
     preview = preview_daily_digest(pharmacy_id)
+    recipient = (to_email or "").strip() or preview["target_email"]
     res = notification_service.send_email(
-        to_email=preview["target_email"],
+        to_email=recipient,
         subject=f"MediPulse Daily Digest: Stock Risks & Expiry Summary for {preview['pharmacy']}",
         html_content=preview["digest_html_preview"]
     )
+    ws_manager.broadcast_sync(
+        "DIGEST_DISPATCHED",
+        {"pharmacy_id": pharmacy_id, "pharmacy": preview["pharmacy"], "recipient": recipient, "success": bool(res.get("success"))},
+        f"Daily digest dispatched for {preview['pharmacy']}",
+    )
     return {
-        "status": "SENT",
+        "status": "SENT" if res.get("success") else "FAILED",
+        "recipient": recipient,
         "result": res
     }
 

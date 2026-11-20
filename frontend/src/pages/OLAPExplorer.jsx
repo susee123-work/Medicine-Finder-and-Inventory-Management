@@ -11,6 +11,7 @@ import {
   Box
 } from 'lucide-react';
 import { api } from '../api/client';
+import { useLiveEvents } from '../hooks/useLiveSocket';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import SchemaVisualizer from '../components/SchemaVisualizer';
@@ -88,6 +89,12 @@ export default function OLAPExplorer() {
     runQuery();
     loadMetadata();
   }, [runQuery]);
+
+  // Auto-refresh OLAP query & ETL audit runs when live ETL or sales events arrive
+  useLiveEvents(['ETL_COMPLETED', 'SALE_RECORDED', 'DELIVERY_RECEIVED'], () => {
+    runQuery();
+    loadMetadata();
+  });
 
   const handleToggleDim = (id) => {
     if (selectedDims.includes(id)) {

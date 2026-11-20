@@ -7,6 +7,7 @@ from typing import Dict, Any, List
 from backend.app.db.client import db, rows
 from backend.app.dw.etl import etl_pipeline
 from backend.app.ml.mining import mining_engine
+from backend.app.core.auth import hash_password
 import logging
 
 logger = logging.getLogger("medipulse.seed")
@@ -219,8 +220,30 @@ def seed_database():
         "email": "director.health@tn.gov.in",
         "full_name": "Dr. Arumugam Director of Public Health",
         "role": "health_official",
+        "password_hash": hash_password("Official@123"),
         "is_active": True
     })
+
+    # Seed the 4 Portal Login Accounts (with real hashed passwords)
+    primary_pharm_id = pharmacies[0]["id"]
+    portal_accounts = [
+        ("admin@apollopharm.com", "Dr. Sarah Chen (Admin)", "pharmacy_admin", "Admin@123", primary_pharm_id),
+        ("staff@apollopharm.com", "Ravi Kumar (Staff)", "pharmacy_staff", "Staff@123", primary_pharm_id),
+        ("health.official@tn.gov.in", "Dr. Arumugam (Director of Health Services)", "health_official", "Official@123", None),
+        ("patient@gmail.com", "Ananya Sharma (Patient)", "patient", "Patient@123", None),
+    ]
+    for p_email, p_full, p_role, p_pass, p_pid in portal_accounts:
+        uid = str(uuid.uuid4())
+        users.append({
+            "id": uid,
+            "email": p_email,
+            "full_name": p_full,
+            "role": p_role,
+            "password_hash": hash_password(p_pass),
+            "is_active": True
+        })
+        if p_pid:
+            memberships.append({"user_id": uid, "pharmacy_id": p_pid, "role": p_role, "is_primary": True})
 
     db.table("pharmacies").insert(pharmacies).execute()
     db.table("users").insert(users).execute()

@@ -10,6 +10,12 @@ router = APIRouter(prefix="/analytics/community", tags=["Community Analytics"])
 
 _COMMUNITY_CACHE = {"expires_at": 0, "payload": None}
 
+
+def invalidate_community_cache() -> None:
+    """Clear the cached community analytics payload after live mutations."""
+    _COMMUNITY_CACHE["expires_at"] = 0
+    _COMMUNITY_CACHE["payload"] = None
+
 @router.get("")
 def get_community_analytics(user = Depends(get_current_user_optional)):
     """

@@ -8,6 +8,7 @@ from backend.app.models.schemas import ConfirmIn, ConfirmRespond
 from backend.app.services.notifications import notification_service
 from backend.app.core.rate_limit import check_rate_limit
 from backend.app.core.auth import get_current_user_optional
+from backend.app.core.websocket import ws_manager
 
 router = APIRouter(prefix="/finder", tags=["Medicine Finder"])
 
@@ -189,7 +190,7 @@ def search_nearby_medicines(
 @router.post("/confirm", dependencies=[Depends(check_rate_limit)])
 def create_confirmation_request(req: ConfirmIn):
     """Submit a real-time medicine availability confirmation request to a specific pharmacy."""
-    pharm = rows(db.table("pharmacies").select("name, phone").eq("id", req.pharmacy_id).execute())
+    pharm = rows(db.table("pharmacies").select("name, phone, email").eq("id", req.pharmacy_id).execute())
     med = rows(db.table("medicines").select("name").eq("id", req.medicine_id).execute())
     
     p_name = pharm[0]["name"] if pharm else "Pharmacy"
@@ -199,10 +200,30 @@ def create_confirmation_request(req: ConfirmIn):
     record["status"] = "pending"
     inserted = rows(db.table("confirmation_requests").insert(record).execute())[0]
 
-    # Notify pharmacy staff via SMS / Email stub
+    # Notify pharmacy staff via SMS and SMTP Email
     notification_service.send_sms(
         to_phone=pharm[0].get("phone", "+919876543210") if pharm else "+919876543210",
         message=f"MediPulse Alert: Patient requested stock confirmation for '{m_name}'. Request ID: {inserted['id']}."
+    )
+    if pharm and pharm[0].get("email"):
+        notification_service.send_email(
+            to_email=pharm[0]["email"],
+            subject=f"MediPulse Stock Confirmation Request: {m_name}",
+            html_content=(
+                f"<div style='font-family:system-ui,sans-serif;max-width:560px;margin:auto;padding:20px;border:1px solid #dde;border-radius:8px;'>"
+                f"<h2 style='color:#0b2a4a;margin-top:0;'>New Patient Stock Verification Request</h2>"
+                f"<p>Medicine: <b>{m_name}</b></p>"
+                f"<p>Pharmacy: <b>{p_name}</b></p>"
+                f"<p>Patient Contact: <b>{req.patient_contact}</b></p>"
+                f"<p>Notes: {req.notes or 'None'}</p>"
+                f"</div>"
+            )
+        )
+
+    ws_manager.broadcast_sync(
+        "CONFIRMATION_REQUESTED",
+        {"request_id": inserted["id"], "pharmacy_id": req.pharmacy_id, "medicine_id": req.medicine_id, "medicine": m_name, "pharmacy": p_name},
+        f"Patient requested stock check for {m_name} at {p_name}",
     )
 
     return {
@@ -257,12 +278,33 @@ def respond_to_confirmation_request(request_id: str, resp: ConfirmRespond):
         raise HTTPException(404, "Request not found")
     
     r = updated[0]
-    # Notify patient via SMS stub
+    # Notify patient via Email (if email address) or SMS
     patient_contact = r.get("patient_contact")
     if patient_contact:
-        notification_service.send_sms(
-            to_phone=patient_contact,
-            message=f"MediPulse Update: Your request for medicine confirmation has been marked as '{resp.status.upper()}'. Check the app for details."
-        )
+        if "@" in str(patient_contact):
+            med_row = rows(db.table("medicines").select("name").eq("id", r.get("medicine_id", "")).execute())
+            pharm_row = rows(db.table("pharmacies").select("name").eq("id", r.get("pharmacy_id", "")).execute())
+            m_name = med_row[0]["name"] if med_row else "Requested Medicine"
+            p_name = pharm_row[0]["name"] if pharm_row else "Pharmacy"
+            email_status = "confirmed" if resp.status in ("available", "confirmed") else "unavailable"
+            html = notification_service.generate_patient_confirmation_html(
+                medicine=m_name, pharmacy=p_name, status=email_status, notes=resp.notes or ""
+            )
+            notification_service.send_email(
+                to_email=str(patient_contact),
+                subject=f"MediPulse Update: {m_name} at {p_name} ({resp.status.upper()})",
+                html_content=html
+            )
+        else:
+            notification_service.send_sms(
+                to_phone=patient_contact,
+                message=f"MediPulse Update: Your request for medicine confirmation has been marked as '{resp.status.upper()}'. Check the app for details."
+            )
+
+    ws_manager.broadcast_sync(
+        "CONFIRMATION_UPDATED",
+        {"request_id": request_id, "pharmacy_id": r.get("pharmacy_id"), "status": resp.status, "notes": resp.notes},
+        f"Stock confirmation {request_id[:8]} marked {resp.status.upper()}",
+    )
 
     return r

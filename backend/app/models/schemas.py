@@ -14,6 +14,24 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+    portal_role: Optional[str] = Field(
+        default=None,
+        pattern="^(pharmacy_staff|pharmacy_admin|health_official|patient)$"
+    )
+
+class EmailOTPRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    portal_role: str = Field(pattern="^(pharmacy_staff|pharmacy_admin|health_official|patient)$")
+    purpose: str = Field(default="login", pattern="^(login|signup)$")
+    full_name: Optional[str] = None
+    password: Optional[str] = None
+    pharmacy_id: Optional[str] = None
+    phone: Optional[str] = None
+
+class EmailOTPVerify(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    code: str = Field(min_length=6, max_length=6)
+    portal_role: str = Field(pattern="^(pharmacy_staff|pharmacy_admin|health_official|patient)$")
 
 class UserOut(BaseModel):
     id: str

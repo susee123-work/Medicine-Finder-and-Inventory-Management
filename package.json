@@ -1,0 +1,12 @@
+{
+  "name": "medipulse-ai",
+  "version": "2.0.0",
+  "private": true,
+  "description": "MediPulse AI: Predictive Medicine Availability and Community Shortage Intelligence System",
+  "scripts": {
+    "build": "npm --prefix frontend run build",
+    "dev": "npm --prefix frontend run dev",
+    "lint": "npm --prefix frontend run lint",
+    "test": "npm --prefix frontend test"
+  }
+}

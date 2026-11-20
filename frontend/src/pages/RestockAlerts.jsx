@@ -3,37 +3,51 @@ import {
   Bell,
   Mail,
   Send,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle,
+  Server
 } from 'lucide-react';
-import { api } from '../api/client';
+import { api, getStoredUser } from '../api/client';
+import { useLiveEvents } from '../hooks/useLiveSocket';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 
 export default function RestockAlerts() {
+  const storedUser = getStoredUser();
   const [medicines, setMedicines] = useState([]);
   const [pharmacies, setPharmacies] = useState([]);
   const [pharmacyId, setPharmacyId] = useState('');
   const [subForm, setSubForm] = useState({
     medicine_id: '',
-    patient_email: 'patient@example.com',
-    patient_phone: '+91-9876543210'
+    patient_email: storedUser?.email || '',
+    patient_phone: ''
   });
   const [subSuccess, setSubSuccess] = useState(null);
   const [subscriptions, setSubscriptions] = useState([]);
   const [digestPreview, setDigestPreview] = useState(null);
+  const [digestTargetOverride, setDigestTargetOverride] = useState('');
   const [loadingDigest, setLoadingDigest] = useState(false);
   const [digestSentMsg, setDigestSentMsg] = useState(null);
+  const [smtpStatus, setSmtpStatus] = useState(null);
+  const [testEmailTo, setTestEmailTo] = useState('');
+  const [testEmailResult, setTestEmailResult] = useState(null);
+  const [sendingTest, setSendingTest] = useState(false);
 
   const loadData = async () => {
     try {
-      const [mList, pList, sList] = await Promise.all([
+      const [mList, pList, sList, emailSt] = await Promise.all([
         api.medicines.list(),
         api.pharmacies.list(),
-        api.alerts.subscriptions()
+        api.alerts.subscriptions(),
+        api.email.status().catch(() => null)
       ]);
       setMedicines(mList);
       setPharmacies(pList);
       setSubscriptions(sList);
+      if (emailSt) {
+        setSmtpStatus(emailSt);
+        if (emailSt.username) setTestEmailTo(emailSt.username);
+      }
       if (mList.length > 0) {
         setSubForm((prev) => ({ ...prev, medicine_id: mList[0].id }));
       }
@@ -64,6 +78,12 @@ export default function RestockAlerts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Live WebSocket auto-refresh for subscriptions, restock notifications & digests
+  useLiveEvents(['SUBSCRIPTION_CREATED', 'DELIVERY_RECEIVED', 'INVENTORY_UPDATED', 'DIGEST_DISPATCHED'], () => {
+    api.alerts.subscriptions().then(setSubscriptions).catch(() => {});
+    if (pharmacyId) fetchDigestPreview(pharmacyId);
+  });
+
   const handleSubscribe = async (e) => {
     e.preventDefault();
     try {
@@ -80,11 +100,35 @@ export default function RestockAlerts() {
   const handleSendDigest = async () => {
     if (!pharmacyId) return;
     try {
-      await api.alerts.sendDigest(pharmacyId);
-      setDigestSentMsg('Daily digest successfully dispatched via notification dispatcher!');
-      setTimeout(() => setDigestSentMsg(null), 4000);
+      const res = await api.alerts.sendDigest(pharmacyId, digestTargetOverride);
+      if (res.result && res.result.success === false) {
+        setDigestSentMsg({ ok: false, text: `SMTP error: ${res.result.error}` });
+      } else {
+        setDigestSentMsg({
+          ok: true,
+          text: `Daily digest sent to ${res.recipient || digestPreview?.target_email} via ${res.result?.provider || 'SMTP'}!`
+        });
+      }
+      setTimeout(() => setDigestSentMsg(null), 6000);
     } catch (err) {
       alert('Dispatch failed: ' + err.message);
+    }
+  };
+
+  const handleSendTestEmail = async (e) => {
+    e.preventDefault();
+    if (!testEmailTo.trim()) return;
+    setSendingTest(true);
+    setTestEmailResult(null);
+    try {
+      const res = await api.email.test(testEmailTo.trim());
+      setTestEmailResult(res);
+      const updatedSt = await api.email.status().catch(() => null);
+      if (updatedSt) setSmtpStatus(updatedSt);
+    } catch (err) {
+      setTestEmailResult({ success: false, error: err.message });
+    } finally {
+      setSendingTest(false);
     }
   };
 
@@ -96,8 +140,62 @@ export default function RestockAlerts() {
           Patient Restock Subscriptions & Pharmacy Daily Digest
         </h2>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
-          Automated SMS/Email notification dispatcher for patient availability and daily staff replenishment digests.
+          Automated Gmail SMTP Email & SMS notification dispatcher for patient availability and daily staff replenishment digests.
         </p>
+      </div>
+
+      {/* Gmail SMTP Status & Test Bar */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-header">
+          <span className="card-title">
+            <Server size={18} style={{ color: 'var(--primary)' }} />
+            Gmail SMTP Email Gateway
+          </span>
+          <span className={`badge ${smtpStatus?.configured && !smtpStatus?.mock_mode ? 'badge-low' : 'badge-medium'}`}>
+            {smtpStatus?.configured && !smtpStatus?.mock_mode
+              ? `Live SMTP (${smtpStatus.host}:${smtpStatus.port})`
+              : 'Stub / Check SMTP_USERNAME in backend/.env'}
+          </span>
+        </div>
+
+        <form onSubmit={handleSendTestEmail} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', flex: '1 1 220px' }}>
+            Sender: <b>{smtpStatus?.username || 'Not configured'}</b>
+          </div>
+          <input
+            type="email"
+            className="input"
+            placeholder="Recipient email to test SMTP…"
+            value={testEmailTo}
+            onChange={(e) => setTestEmailTo(e.target.value)}
+            style={{ flex: '1 1 240px' }}
+            required
+          />
+          <button type="submit" className="btn btn-primary btn-sm" disabled={sendingTest}>
+            <Send size={14} /> {sendingTest ? 'Sending…' : 'Send Test Email'}
+          </button>
+        </form>
+
+        {testEmailResult && (
+          <div style={{
+            marginTop: 10,
+            padding: '8px 12px',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: 13,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            background: testEmailResult.success ? 'var(--low-bg)' : 'var(--critical-bg)',
+            color: testEmailResult.success ? 'var(--low)' : 'var(--critical)',
+          }}>
+            {testEmailResult.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+            <span>
+              {testEmailResult.success
+                ? `Test email delivered via ${testEmailResult.provider} to ${testEmailResult.to || testEmailTo}`
+                : `Failed: ${testEmailResult.error}`}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="grid-cols-2">
@@ -112,7 +210,7 @@ export default function RestockAlerts() {
 
           <form onSubmit={handleSubscribe}>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
-              Receive an immediate SMS or Email alert as soon as new batches arrive and are received.
+              Receive an immediate SMTP Email or SMS alert as soon as new batches arrive and are received.
             </p>
 
             <div style={{ marginBottom: 12 }}>
@@ -183,9 +281,9 @@ export default function RestockAlerts() {
             </select>
           </div>
 
-          <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+          <div style={{ marginBottom: 10, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
             <div>
-              Target: <b>{digestPreview?.target_email || 'staff@medipulse.ai'}</b>
+              Default Target: <b>{digestPreview?.target_email || 'staff@medipulse.ai'}</b>
               <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                 {digestPreview?.at_risk_count || 0} at-risk items • {digestPreview?.expiring_count || 0} expiring in 30d
               </div>
@@ -196,9 +294,27 @@ export default function RestockAlerts() {
             </button>
           </div>
 
+          <div style={{ marginBottom: 12 }}>
+            <input
+              type="email"
+              className="input"
+              style={{ width: '100%', fontSize: 12 }}
+              placeholder="Optional: override recipient email (e.g. your Gmail)…"
+              value={digestTargetOverride}
+              onChange={(e) => setDigestTargetOverride(e.target.value)}
+            />
+          </div>
+
           {digestSentMsg && (
-            <div style={{ padding: 8, background: 'var(--low-bg)', color: 'var(--low)', borderRadius: 4, marginBottom: 10, fontSize: 12 }}>
-              ✓ {digestSentMsg}
+            <div style={{
+              padding: 8,
+              background: digestSentMsg.ok ? 'var(--low-bg)' : 'var(--critical-bg)',
+              color: digestSentMsg.ok ? 'var(--low)' : 'var(--critical)',
+              borderRadius: 4,
+              marginBottom: 10,
+              fontSize: 12
+            }}>
+              {digestSentMsg.ok ? '✓ ' : '✗ '}{digestSentMsg.text}
             </div>
           )}
 
@@ -209,7 +325,7 @@ export default function RestockAlerts() {
               style={{
                 border: '1px solid var(--border)',
                 borderRadius: 'var(--radius-sm)',
-                maxHeight: 260,
+                maxHeight: 240,
                 overflowY: 'auto',
                 padding: 10,
                 background: '#ffffff'
@@ -269,4 +385,3 @@ export default function RestockAlerts() {
     </div>
   );
 }
-

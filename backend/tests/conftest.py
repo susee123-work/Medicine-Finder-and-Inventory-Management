@@ -1,12 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
+from backend.app.config import settings
 from backend.app.main import app
 from backend.app.db.client import db
 from backend.app.seed.generate_seed import seed_database
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_database():
-    """Ensure database is seeded once before running tests."""
+    """Ensure database is seeded once before running tests and mock outbound emails in tests."""
+    settings.MOCK_NOTIFICATIONS = True
     pharms = db.get_table("pharmacies")
     if not pharms:
         seed_database()

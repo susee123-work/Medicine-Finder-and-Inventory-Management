@@ -8,33 +8,50 @@ import {
   Navigation,
   Pill
 } from 'lucide-react';
-import { api } from '../api/client';
+import { api, getStoredUser } from '../api/client';
+import { useLiveEvents } from '../hooks/useLiveSocket';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 
 export default function PatientFinder() {
+  const storedUser = getStoredUser();
   const [query, setQuery] = useState('Amoxicillin');
   const [openNow, setOpenNow] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(true);
-  const [patientCoords] = useState({ lat: 13.0418, lng: 80.2341 }); // Chennai center
+  const [patientCoords, setPatientCoords] = useState({ lat: 13.0418, lng: 80.2341, source: 'default' });
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
   const [substitutes, setSubstitutes] = useState([]);
   const [selectedResult, setSelectedResult] = useState(null);
 
-  // Confirmation Request Modal
+  // Confirmation Request Modal (populated dynamically from logged-in user)
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState(null);
-  const [patientContact, setPatientContact] = useState('+91-9876543210');
-  const [patientName, setPatientName] = useState('Ananya Sharma');
-  const [notes, setNotes] = useState('Checking availability before traveling.');
+  const [patientContact, setPatientContact] = useState(storedUser?.email || '');
+  const [patientName, setPatientName] = useState(storedUser?.full_name || storedUser?.name || '');
+  const [notes, setNotes] = useState('');
   const [confirmSuccess, setConfirmSuccess] = useState(null);
+  const [liveStatusAlert, setLiveStatusAlert] = useState(null);
 
-  const doSearch = async (med = query) => {
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by this browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const nextCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude, source: 'gps' };
+        setPatientCoords(nextCoords);
+      },
+      () => alert('Could not access GPS location — using default coordinates.')
+    );
+  };
+
+  const doSearch = async (med = query, silent = false) => {
     if (!med.trim()) return;
-    setLoading(true);
-    setConfirmSuccess(null);
+    if (!silent) setLoading(true);
+    if (!silent) setConfirmSuccess(null);
     try {
       const res = await api.finder.search(
         med,
@@ -45,20 +62,33 @@ export default function PatientFinder() {
       );
       setResults(res.results || []);
       setSubstitutes(res.generic_substitutes || []);
-      if (res.results && res.results.length > 0) {
+      if (res.results && res.results.length > 0 && !silent) {
         setSelectedResult(res.results[0]);
       }
     } catch (err) {
       console.error('Search failed:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    doSearch('Amoxicillin');
+    doSearch(query);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openNow, inStockOnly]);
+  }, [openNow, inStockOnly, patientCoords.lat, patientCoords.lng]);
+
+  // Real-time WebSocket updates for stock counts and patient confirmation responses!
+  useLiveEvents(['INVENTORY_UPDATED', 'SALE_RECORDED', 'BATCH_VERIFIED', 'DELIVERY_RECEIVED'], () => {
+    doSearch(query, true);
+  });
+
+  useLiveEvents(['CONFIRMATION_UPDATED'], (event) => {
+    if (confirmSuccess && event.payload?.request_id === confirmSuccess.id) {
+      setLiveStatusAlert(
+        `Live Update: Pharmacy marked your request as ${String(event.payload.status || '').toUpperCase()}${event.payload.notes ? ` — "${event.payload.notes}"` : ''}.`
+      );
+    }
+  });
 
   const handleSubmitConfirm = async (e) => {
     e.preventDefault();
@@ -127,12 +157,22 @@ export default function PatientFinder() {
               Open Now
             </label>
 
+            <button type="button" className="btn btn-secondary btn-sm" onClick={handleUseMyLocation}>
+              <Navigation size={14} /> {patientCoords.source === 'gps' ? 'Live GPS Active' : 'Use My GPS'}
+            </button>
+
             <button type="submit" className="btn btn-primary">
               <Search size={15} /> Find Medicine
             </button>
           </div>
         </form>
       </div>
+
+      {liveStatusAlert && (
+        <div style={{ padding: '12px 16px', background: 'var(--primary-light)', color: 'var(--primary)', borderRadius: 'var(--radius-sm)', marginBottom: 14, fontSize: 13, fontWeight: 600 }}>
+          {liveStatusAlert}
+        </div>
+      )}
 
       {confirmSuccess && (
         <div style={{ padding: '12px 16px', background: 'var(--low-bg)', color: 'var(--low)', borderRadius: 'var(--radius-sm)', marginBottom: 20, fontSize: 13 }}>

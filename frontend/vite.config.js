@@ -17,8 +17,13 @@ export default defineConfig({
       '/finder': 'http://127.0.0.1:8000',
       '/analytics': 'http://127.0.0.1:8000',
       '/alerts': 'http://127.0.0.1:8000',
+      '/email': 'http://127.0.0.1:8000',
       '/health': 'http://127.0.0.1:8000',
       '/metrics': 'http://127.0.0.1:8000',
+      '/ws': {
+        target: 'ws://127.0.0.1:8000',
+        ws: true
+      }
     }
   },
   test: {

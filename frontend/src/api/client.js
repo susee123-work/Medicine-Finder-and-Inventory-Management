@@ -1,4 +1,4 @@
-const API_BASE = ''; // uses Vite proxy
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 export const getStoredToken = () => localStorage.getItem('medipulse_token');
 export const setStoredToken = (token) => localStorage.setItem('medipulse_token', token);
@@ -46,7 +46,11 @@ export const api = {
   // Auth & Roles
   auth: {
     login: (creds) => request('/auth/login', { method: 'POST', body: JSON.stringify(creds) }),
+    portalLogin: (portalKey, creds) => request(`/auth/login/${portalKey}`, { method: 'POST', body: JSON.stringify(creds) }),
     register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+    requestOtp: (data) => request('/auth/otp/request', { method: 'POST', body: JSON.stringify(data) }),
+    verifyOtp: (data) => request('/auth/otp/verify', { method: 'POST', body: JSON.stringify(data) }),
+    portalStats: () => request('/auth/portal-stats'),
     me: () => request('/auth/me'),
     getDemoTokens: () => request('/auth/demo-tokens')
   },
@@ -130,7 +134,17 @@ export const api = {
     subscribe: (sub) => request('/alerts/subscribe', { method: 'POST', body: JSON.stringify(sub) }),
     subscriptions: () => request('/alerts/subscriptions'),
     previewDigest: (pharmacyId) => request(`/alerts/digest/preview?pharmacy_id=${pharmacyId}`),
-    sendDigest: (pharmacyId) => request(`/alerts/digest/send?pharmacy_id=${pharmacyId}`, { method: 'POST' })
+    sendDigest: (pharmacyId, toEmail) => {
+      let q = `/alerts/digest/send?pharmacy_id=${pharmacyId}`;
+      if (toEmail && toEmail.trim()) q += `&to_email=${encodeURIComponent(toEmail.trim())}`;
+      return request(q, { method: 'POST' });
+    }
+  },
+
+  // SMTP Email Diagnostics
+  email: {
+    status: () => request('/email/status'),
+    test: (to) => request(`/email/test?to=${encodeURIComponent(to)}`, { method: 'POST' })
   },
 
   // Monitoring

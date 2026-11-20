@@ -4,7 +4,8 @@ import {
   ChevronRight,
   RefreshCw
 } from 'lucide-react';
-import { api } from '../api/client';
+import { api, getStoredUser } from '../api/client';
+import { useLiveEvents } from '../hooks/useLiveSocket';
 import RiskBadge from '../components/RiskBadge';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
@@ -43,12 +44,13 @@ export default function ShortagePredictions() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const loadData = async (pid, h = horizon) => {
-    setLoading(true);
+  const loadData = async (pid, h = horizon, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const pharms = await api.pharmacies.list();
       setPharmacies(pharms);
-      const chosenId = pid || pharms[0]?.id;
+      const storedUser = getStoredUser();
+      const chosenId = pid || storedUser?.pharmacy_id || pharms[0]?.id;
       setPharmacyId(chosenId);
 
       const preds = await api.predictions.shortages(chosenId, h);
@@ -56,7 +58,7 @@ export default function ShortagePredictions() {
     } catch (err) {
       console.error('Failed to load predictions:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -64,6 +66,14 @@ export default function ShortagePredictions() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [horizon]);
+
+  // Recalculate shortage forecasts live when inventory or sales change over WebSocket
+  useLiveEvents(
+    ['SALE_RECORDED', 'INVENTORY_UPDATED', 'INVENTORY_BULK_IMPORTED', 'DELIVERY_RECEIVED'],
+    () => {
+      if (pharmacyId) loadData(pharmacyId, horizon, true);
+    }
+  );
 
   const handlePharmacyChange = (e) => {
     const newId = e.target.value;

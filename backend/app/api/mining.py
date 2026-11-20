@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from backend.app.ml.mining import mining_engine
 from backend.app.db.client import db, rows
 from backend.app.core.auth import get_current_user_optional
+from backend.app.core.websocket import ws_manager
 
 router = APIRouter(prefix="/analytics/mining", tags=["Data Mining"])
 
@@ -48,6 +49,11 @@ def trigger_model_retraining(user = Depends(get_current_user_optional)):
     Calculates accuracy, F1-score, feature importances, and records run in model_registry.
     """
     metrics = mining_engine.train_shortage_classifier()
+    ws_manager.broadcast_sync(
+        "MODELS_RETRAINED",
+        {"accuracy": metrics.get("accuracy"), "f1_score": metrics.get("f1_score")},
+        f"ML Shortage Risk Classifier retrained (Acc: {metrics.get('accuracy')})",
+    )
     return {
         "status": "SUCCESS",
         "message": "Random Forest Shortage Risk Classifier successfully retrained.",

@@ -7,6 +7,8 @@ from backend.app.models.schemas import (
 )
 from backend.app.core.auth import get_current_user_optional, require_roles, require_pharmacy_access
 from backend.app.core.audit import log_audit_event
+from backend.app.core.websocket import ws_manager
+from backend.app.api.community import invalidate_community_cache
 from backend.app.services.notifications import notification_service
 
 router = APIRouter(tags=["Inventory & Transactions"])
@@ -99,6 +101,13 @@ def upsert_stock(s: StockIn, user = Depends(get_current_user_optional)):
     if s.quantity > 0:
         _check_and_notify_restock(s.medicine_id, s.pharmacy_id, s.quantity)
 
+    invalidate_community_cache()
+    ws_manager.broadcast_sync(
+        "INVENTORY_UPDATED",
+        {"pharmacy_id": s.pharmacy_id, "medicine_id": s.medicine_id, "batch_no": s.batch_no, "quantity": s.quantity},
+        f"Batch {s.batch_no} {'updated' if prev else 'added'} ({s.quantity} units)",
+    )
+
     return inserted
 
 @router.post("/inventory/bulk")
@@ -162,6 +171,13 @@ def bulk_upload_stock(bulk: StockBulkIn, user = Depends(get_current_user_optiona
         new_state={"rows_processed": len(processed), "errors_count": len(errors)}
     )
 
+    invalidate_community_cache()
+    ws_manager.broadcast_sync(
+        "INVENTORY_BULK_IMPORTED",
+        {"pharmacy_id": bulk.pharmacy_id, "rows_processed": len(processed)},
+        f"Bulk imported {len(processed)} inventory batch(es)",
+    )
+
     return {
         "status": "COMPLETED",
         "rows_processed": len(processed),
@@ -181,6 +197,11 @@ def verify_batch_stock(batch_id: str, user = Depends(get_current_user_optional))
     if not updated:
         raise HTTPException(404, "Batch not found")
     log_audit_event("VERIFY_STOCK", "inventory", batch_id, actor_user_id=user.id if user else None)
+    ws_manager.broadcast_sync(
+        "BATCH_VERIFIED",
+        {"batch_id": batch_id, "pharmacy_id": updated[0].get("pharmacy_id"), "verified_at": updated[0].get("verified_at")},
+        f"Physical shelf stock verified for batch {updated[0].get('batch_no', batch_id[:8])}",
+    )
     return updated[0]
 
 @router.get("/inventory/expiring")
@@ -261,6 +282,20 @@ def record_sale(s: SaleIn, user = Depends(get_current_user_optional)):
         pharmacy_id=s.pharmacy_id,
         actor_user_id=user.id if user else None,
         new_state={"sale_id": sale_rec["id"], "quantity": s.quantity, "fefo_allocations": deductions}
+    )
+
+    invalidate_community_cache()
+    ws_manager.broadcast_sync(
+        "SALE_RECORDED",
+        {
+            "sale_id": sale_rec["id"],
+            "pharmacy_id": s.pharmacy_id,
+            "medicine_id": s.medicine_id,
+            "quantity": s.quantity,
+            "total_amount": sale_rec["total_amount"],
+            "fefo_deductions": deductions,
+        },
+        f"FEFO Sale: {s.quantity} units dispensed across {len(deductions)} batch(es)",
     )
 
     return {
@@ -345,6 +380,19 @@ def receive_delivery(
         entity_id=delivery_id,
         pharmacy_id=d["pharmacy_id"],
         new_state=updated_deliv
+    )
+
+    invalidate_community_cache()
+    ws_manager.broadcast_sync(
+        "DELIVERY_RECEIVED",
+        {
+            "delivery_id": delivery_id,
+            "pharmacy_id": d["pharmacy_id"],
+            "medicine_id": d["medicine_id"],
+            "quantity_received": quantity_received,
+            "batch_no": batch_no.strip(),
+        },
+        f"Delivery received: +{quantity_received} units (Batch {batch_no.strip()})",
     )
 
     return {

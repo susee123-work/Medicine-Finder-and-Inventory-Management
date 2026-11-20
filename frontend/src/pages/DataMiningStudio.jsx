@@ -12,6 +12,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { api } from '../api/client';
+import { useLiveEvents } from '../hooks/useLiveSocket';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import {
   Chart as ChartJS,
@@ -69,6 +70,11 @@ export default function DataMiningStudio() {
   useEffect(() => {
     loadMiningData();
   }, []);
+
+  // Live refresh when ML models retrain or new ETL/sales data arrives
+  useLiveEvents(['MODELS_RETRAINED', 'ETL_COMPLETED', 'SALE_RECORDED'], () => {
+    loadMiningData();
+  });
 
   const handleRetrain = async () => {
     setRetraining(true);

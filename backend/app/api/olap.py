@@ -2,6 +2,8 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends
 from backend.app.dw.olap_engine import olap_engine
 from backend.app.dw.etl import etl_pipeline
+from backend.app.core.websocket import ws_manager
+from backend.app.api.community import invalidate_community_cache
 from backend.app.models.schemas import OLAPQueryIn, SavedViewIn
 from backend.app.db.client import db, rows
 from backend.app.core.auth import get_current_user_optional
@@ -80,6 +82,12 @@ def trigger_etl_run(user = Depends(get_current_user_optional)):
     and logs run metrics into etl_runs.
     """
     result = etl_pipeline.run_pipeline()
+    invalidate_community_cache()
+    ws_manager.broadcast_sync(
+        "ETL_COMPLETED",
+        {"run_id": result.get("run_id"), "rows_processed": result.get("rows_processed", result.get("rows_loaded", 0))},
+        f"Incremental ETL completed ({result.get('rows_processed', result.get('rows_loaded', 0))} rows)",
+    )
     return result
 
 @router.get("/etl/history")

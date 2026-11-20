@@ -1,9 +1,10 @@
 import time
 import os
 from datetime import datetime, timezone
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Response, Query
 from backend.app.db.client import db, rows
 from backend.app.config import settings
+from backend.app.services.notifications import notification_service
 
 router = APIRouter(tags=["Monitoring & System Health"])
 
@@ -76,4 +77,25 @@ def get_prometheus_metrics():
     ]
     
     return Response(content="\n".join(lines) + "\n", media_type="text/plain; version=0.0.4; charset=utf-8")
+
+@router.get("/email/status")
+def email_status():
+    """Return current SMTP configuration status (without exposing password) and recent dispatch log."""
+    return notification_service.get_smtp_status()
+
+@router.post("/email/test")
+def test_email(to: str = Query(..., description="Recipient email address")):
+    """Send a test email to verify SMTP configuration."""
+    result = notification_service.send_email(
+        to_email=to,
+        subject="MediPulse AI — SMTP Test",
+        html_content="""
+        <div style='font-family:sans-serif;padding:20px;max-width:500px;'>
+            <h2 style='color:#0b2a4a;'>&#10003; MediPulse AI — SMTP Working</h2>
+            <p>Your Gmail SMTP integration is configured correctly.</p>
+            <p style='color:#666;font-size:13px;'>This is an automated test from MediPulse AI.</p>
+        </div>
+        """
+    )
+    return result
 
