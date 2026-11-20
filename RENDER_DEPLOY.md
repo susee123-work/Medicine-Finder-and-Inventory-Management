@@ -1,7 +1,7 @@
 # Deploying MediPulse AI on Render
 
 This guide outlines how to deploy **MediPulse AI** to [Render](https://render.com) using your GitHub repository:
-`https://github.com/susee123-work/CSA1602-Data-warehousing-and-Data-Mining-.git`
+`https://github.com/susee123-work/Medicine-Finder-and-Inventory-Management.git`
 
 ---
 
@@ -23,18 +23,18 @@ In this mode, a single Render Web Service builds both the Python backend and Rea
 ### Step 1: Push Repository to GitHub
 Ensure all code is committed and pushed:
 ```bash
-git remote set-url origin https://github.com/susee123-work/CSA1602-Data-warehousing-and-Data-Mining-.git
-git push -u origin master
+git remote set-url origin https://github.com/susee123-work/Medicine-Finder-and-Inventory-Management.git
+git push -u origin main
 ```
 
 ### Step 2: Create a Web Service on Render
 1. Log into [Render Dashboard](https://dashboard.render.com).
 2. Click **New +** -> **Web Service**.
-3. Select **Build and deploy from a Git repository** and connect your GitHub repo `susee123-work/CSA1602-Data-warehousing-and-Data-Mining-`.
+3. Select **Build and deploy from a Git repository** and connect your GitHub repo `susee123-work/Medicine-Finder-and-Inventory-Management`.
 4. Fill in the following service settings:
    - **Name:** `medipulse-ai` (or your preferred name)
    - **Region:** Any (e.g., `Oregon (US West)` or `Singapore`)
-   - **Branch:** `master`
+   - **Branch:** `main`
    - **Runtime:** `Python 3`
    - **Build Command:** `./build.sh` (or `pip install -r requirements.txt && cd frontend && npm install && npm run build && cd ..`)
    - **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
@@ -94,6 +94,6 @@ If you prefer hosting the React frontend on Render's dedicated CDN Static Site n
 
 This repository includes a `render.yaml` configuration file.
 1. In the Render Dashboard, click **New +** -> **Blueprint**.
-2. Connect `https://github.com/susee123-work/CSA1602-Data-warehousing-and-Data-Mining-.git`.
+2. Connect `https://github.com/susee123-work/Medicine-Finder-and-Inventory-Management.git`.
 3. Render will auto-discover `render.yaml`, prefill all settings, and prompt you only for `SMTP_USERNAME` and `SMTP_PASSWORD`.
 4. Click **Apply**.
