@@ -154,10 +154,13 @@ class ConfirmIn(BaseModel):
     medicine_id: str
     patient_contact: str = Field(min_length=5, max_length=100)
     patient_name: Optional[str] = None
+    quantity_requested: Optional[int] = Field(default=1, ge=1)
+    urgency: Optional[str] = "Normal"
+    pickup_preference: Optional[str] = "Counter Pickup"
     notes: Optional[str] = None
 
 class ConfirmRespond(BaseModel):
-    status: str = Field(pattern="^(available|unavailable)$")
+    status: str = Field(pattern="^(available|unavailable|confirmed|declined|ready_for_pickup)$")
     notes: Optional[str] = None
 
 class RestockSubIn(BaseModel):

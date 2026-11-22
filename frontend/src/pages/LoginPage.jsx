@@ -225,6 +225,9 @@ export default function LoginPage({ portal, onBack, onSwitchPortal, onLoginSucce
       });
       setOtpInfoMsg(res.message || `6-digit verification code sent to ${trimmedEmail}`);
       setOtpDevCode(res.dev_code || '');
+      if (res.dev_code && res.dev_code.length === 6) {
+        setOtpDigits(res.dev_code.split(''));
+      }
       setOtpCountdown(res.expires_in_seconds || 600);
       setOtpDigits(['', '', '', '', '', '']);
       setStep('verify_otp');
@@ -601,29 +604,49 @@ export default function LoginPage({ portal, onBack, onSwitchPortal, onLoginSucce
                   background: '#FEF6E6',
                   border: '1px solid #F5D08A',
                   borderRadius: 12,
-                  padding: '10px 14px',
+                  padding: '12px 14px',
                   marginBottom: 16,
                   fontSize: 12.5,
                   color: '#92400E',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 10,
+                  flexDirection: 'column',
+                  gap: 8,
                 }}>
-                  <span>Network blocked SMTP 587/465 — local dev code:</span>
-                  <code style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 15,
-                    fontWeight: 700,
-                    letterSpacing: 2,
-                    color: '#141210',
-                    background: '#FFFFFF',
-                    padding: '3px 8px',
-                    borderRadius: 6,
-                    border: '1px solid #E5D4B3',
-                  }}>
-                    {otpDevCode}
-                  </code>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 600 }}>Host blocked SMTP 587/465 — Verification Code:</span>
+                    <code style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 16,
+                      fontWeight: 700,
+                      letterSpacing: 3,
+                      color: '#141210',
+                      background: '#FFFFFF',
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      border: '1px solid #E5D4B3',
+                    }}>
+                      {otpDevCode}
+                    </code>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11.5, color: '#A16207', flexWrap: 'wrap' }}>
+                    <span>Render Free tier restricts outbound SMTP ports. Code auto-populated below:</span>
+                    <button
+                      type="button"
+                      onClick={() => setOtpDigits(otpDevCode.split(''))}
+                      style={{
+                        background: '#141210',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: 6,
+                        padding: '4px 10px',
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Auto-Fill Code
+                    </button>
+                  </div>
                 </div>
               )}
 

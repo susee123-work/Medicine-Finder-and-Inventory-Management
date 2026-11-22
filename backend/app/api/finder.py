@@ -190,31 +190,45 @@ def search_nearby_medicines(
 @router.post("/confirm", dependencies=[Depends(check_rate_limit)])
 def create_confirmation_request(req: ConfirmIn):
     """Submit a real-time medicine availability confirmation request to a specific pharmacy."""
-    pharm = rows(db.table("pharmacies").select("name, phone, email").eq("id", req.pharmacy_id).execute())
-    med = rows(db.table("medicines").select("name").eq("id", req.medicine_id).execute())
+    pharm = rows(db.table("pharmacies").select("name, phone, email, address_line, city").eq("id", req.pharmacy_id).execute())
+    med = rows(db.table("medicines").select("name, generic_name, strength").eq("id", req.medicine_id).execute())
     
-    p_name = pharm[0]["name"] if pharm else "Pharmacy"
-    m_name = med[0]["name"] if med else "Medicine"
+    p_info = pharm[0] if pharm else {}
+    m_info = med[0] if med else {}
+    p_name = p_info.get("name", "Pharmacy")
+    m_name = m_info.get("name", "Medicine")
 
     record = req.model_dump()
     record["status"] = "pending"
+    record["medicine_name"] = m_name
+    record["pharmacy_name"] = p_name
+    record["pharmacy_phone"] = p_info.get("phone", "")
+    record["pharmacy_city"] = p_info.get("city", "")
+    record["medicine_strength"] = m_info.get("strength", "")
+    record["quantity_requested"] = req.quantity_requested or 1
+    record["urgency"] = req.urgency or "Normal"
+    record["pickup_preference"] = req.pickup_preference or "Counter Pickup"
+    record["created_at"] = datetime.now(timezone.utc).isoformat()
     inserted = rows(db.table("confirmation_requests").insert(record).execute())[0]
 
     # Notify pharmacy staff via SMS and SMTP Email
     notification_service.send_sms(
-        to_phone=pharm[0].get("phone", "+919876543210") if pharm else "+919876543210",
-        message=f"MediPulse Alert: Patient requested stock confirmation for '{m_name}'. Request ID: {inserted['id']}."
+        to_phone=p_info.get("phone", "+919876543210") if p_info else "+919876543210",
+        message=f"MediPulse Alert: Patient requested {record['quantity_requested']}x '{m_name}'. Request ID: {inserted['id']}."
     )
-    if pharm and pharm[0].get("email"):
+    if p_info.get("email"):
         notification_service.send_email(
-            to_email=pharm[0]["email"],
+            to_email=p_info["email"],
             subject=f"MediPulse Stock Confirmation Request: {m_name}",
             html_content=(
                 f"<div style='font-family:system-ui,sans-serif;max-width:560px;margin:auto;padding:20px;border:1px solid #dde;border-radius:8px;'>"
-                f"<h2 style='color:#0b2a4a;margin-top:0;'>New Patient Stock Verification Request</h2>"
-                f"<p>Medicine: <b>{m_name}</b></p>"
+                f"<h2 style='color:#0b2a4a;margin-top:0;'>New Patient Medicine Reservation Request</h2>"
+                f"<p>Medicine: <b>{m_name}</b> ({m_info.get('strength', '')})</p>"
+                f"<p>Quantity: <b>{record['quantity_requested']} unit(s)</b></p>"
+                f"<p>Urgency: <b>{record['urgency']}</b></p>"
+                f"<p>Pickup Mode: <b>{record['pickup_preference']}</b></p>"
                 f"<p>Pharmacy: <b>{p_name}</b></p>"
-                f"<p>Patient Contact: <b>{req.patient_contact}</b></p>"
+                f"<p>Patient: <b>{req.patient_name or 'Patient'}</b> ({req.patient_contact})</p>"
                 f"<p>Notes: {req.notes or 'None'}</p>"
                 f"</div>"
             )
@@ -222,16 +236,46 @@ def create_confirmation_request(req: ConfirmIn):
 
     ws_manager.broadcast_sync(
         "CONFIRMATION_REQUESTED",
-        {"request_id": inserted["id"], "pharmacy_id": req.pharmacy_id, "medicine_id": req.medicine_id, "medicine": m_name, "pharmacy": p_name},
-        f"Patient requested stock check for {m_name} at {p_name}",
+        {
+            "request_id": inserted["id"],
+            "pharmacy_id": req.pharmacy_id,
+            "medicine_id": req.medicine_id,
+            "medicine": m_name,
+            "pharmacy": p_name,
+            "patient_name": req.patient_name,
+            "patient_contact": req.patient_contact,
+            "quantity_requested": record["quantity_requested"],
+            "urgency": record["urgency"],
+            "status": "pending",
+            "created_at": inserted["created_at"],
+        },
+        f"Patient {req.patient_name or 'User'} requested {record['quantity_requested']}x {m_name} at {p_name}",
     )
 
     return {
         "id": inserted["id"],
         "status": "pending",
-        "message": f"Confirmation request submitted to {p_name}. You will receive an SMS/Email alert once staff verifies shelf stock.",
+        "message": f"Confirmation request for {m_name} submitted to {p_name}. Pharmacy staff will verify stock immediately.",
         "request": inserted
     }
+
+@router.get("/my-requests")
+def get_my_patient_requests(contact: Optional[str] = Query(None, description="Patient email or phone number")):
+    """Retrieve live active and historical medicine requests placed by the current patient."""
+    all_reqs = rows(
+        db.table("confirmation_requests")
+        .select("*, medicines(name, generic_name, strength), pharmacies(name, address_line, city, phone)")
+        .order("created_at", desc=True)
+        .execute()
+    )
+    if contact and contact.strip():
+        clean = contact.strip().lower()
+        return [
+            r for r in all_reqs
+            if clean in str(r.get("patient_contact", "")).lower()
+            or clean in str(r.get("patient_name", "")).lower()
+        ]
+    return all_reqs[:30]
 
 @router.get("/confirm/{request_id}")
 def check_confirmation_status(request_id: str):
@@ -243,23 +287,28 @@ def check_confirmation_status(request_id: str):
     return {
         "id": r["id"],
         "status": r["status"],
-        "medicine": (r.get("medicines") or {}).get("name"),
-        "pharmacy": (r.get("pharmacies") or {}).get("name"),
+        "medicine": r.get("medicine_name") or (r.get("medicines") or {}).get("name"),
+        "pharmacy": r.get("pharmacy_name") or (r.get("pharmacies") or {}).get("name"),
+        "quantity_requested": r.get("quantity_requested", 1),
+        "urgency": r.get("urgency", "Normal"),
+        "pickup_preference": r.get("pickup_preference", "Counter Pickup"),
         "created_at": r["created_at"],
         "responded_at": r.get("responded_at"),
         "notes": r.get("notes")
     }
 
 @router.get("/pharmacy-requests")
-def list_pharmacy_confirmation_requests(pharmacy_id: str):
+def list_pharmacy_confirmation_requests(pharmacy_id: Optional[str] = Query(None)):
     """Pharmacy staff view to see pending and historical patient confirmation requests."""
-    return rows(
+    all_reqs = rows(
         db.table("confirmation_requests")
-        .select("*, medicines(name, strength)")
-        .eq("pharmacy_id", pharmacy_id)
+        .select("*, medicines(name, strength), pharmacies(name, city)")
         .order("created_at", desc=True)
         .execute()
     )
+    if pharmacy_id and pharmacy_id.strip():
+        return [r for r in all_reqs if r.get("pharmacy_id") == pharmacy_id.strip()]
+    return all_reqs
 
 @router.patch("/pharmacy-requests/{request_id}")
 def respond_to_confirmation_request(request_id: str, resp: ConfirmRespond):
@@ -278,15 +327,14 @@ def respond_to_confirmation_request(request_id: str, resp: ConfirmRespond):
         raise HTTPException(404, "Request not found")
     
     r = updated[0]
+    m_name = r.get("medicine_name") or "Medicine"
+    p_name = r.get("pharmacy_name") or "Pharmacy"
+
     # Notify patient via Email (if email address) or SMS
     patient_contact = r.get("patient_contact")
     if patient_contact:
         if "@" in str(patient_contact):
-            med_row = rows(db.table("medicines").select("name").eq("id", r.get("medicine_id", "")).execute())
-            pharm_row = rows(db.table("pharmacies").select("name").eq("id", r.get("pharmacy_id", "")).execute())
-            m_name = med_row[0]["name"] if med_row else "Requested Medicine"
-            p_name = pharm_row[0]["name"] if pharm_row else "Pharmacy"
-            email_status = "confirmed" if resp.status in ("available", "confirmed") else "unavailable"
+            email_status = "confirmed" if resp.status in ("available", "confirmed", "ready_for_pickup") else "unavailable"
             html = notification_service.generate_patient_confirmation_html(
                 medicine=m_name, pharmacy=p_name, status=email_status, notes=resp.notes or ""
             )
@@ -298,13 +346,22 @@ def respond_to_confirmation_request(request_id: str, resp: ConfirmRespond):
         else:
             notification_service.send_sms(
                 to_phone=patient_contact,
-                message=f"MediPulse Update: Your request for medicine confirmation has been marked as '{resp.status.upper()}'. Check the app for details."
+                message=f"MediPulse Update: Your request for '{m_name}' has been marked '{resp.status.upper()}'. Staff notes: {resp.notes or 'Stock confirmed'}."
             )
 
     ws_manager.broadcast_sync(
         "CONFIRMATION_UPDATED",
-        {"request_id": request_id, "pharmacy_id": r.get("pharmacy_id"), "status": resp.status, "notes": resp.notes},
-        f"Stock confirmation {request_id[:8]} marked {resp.status.upper()}",
+        {
+            "request_id": request_id,
+            "pharmacy_id": r.get("pharmacy_id"),
+            "status": resp.status,
+            "notes": resp.notes,
+            "medicine": m_name,
+            "pharmacy": p_name,
+            "patient_contact": r.get("patient_contact"),
+            "responded_at": r.get("responded_at"),
+        },
+        f"Request {request_id[:8]} for {m_name} marked {resp.status.upper()}",
     )
 
     return r

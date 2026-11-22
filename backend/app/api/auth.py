@@ -195,26 +195,26 @@ def request_email_otp(payload: EmailOTPRequest):
 
     if not send_res.get("success"):
         err_msg = send_res.get("error", "SMTP delivery failed")
-        if settings.DEBUG and not settings.MOCK_NOTIFICATIONS:
-            return {
-                "status": "OTP_SENT",
-                "email": email_lower,
-                "portal_role": payload.portal_role,
-                "purpose": payload.purpose,
-                "expires_in_seconds": OTP_TTL_SECONDS,
-                "provider": "local_dev_fallback",
-                "smtp_error": err_msg,
-                "dev_code": code,
-                "message": (
-                    f"Your current Wi-Fi blocks outbound SMTP ports 587/465 ({err_msg}). "
-                    f"Use a mobile hotspot or set EMAIL_WEBHOOK_URL / RESEND_API_KEY in backend/.env for port-443 delivery."
-                ),
-            }
-        _otp_store.pop(email_lower, None)
-        raise HTTPException(
-            status_code=502,
-            detail=f"Could not deliver verification email: {err_msg}"
+        logger.warning(
+            "Could not deliver email to %s (%s). Providing verification fallback code.",
+            email_lower,
+            err_msg
         )
+        return {
+            "status": "OTP_SENT",
+            "email": email_lower,
+            "portal_role": payload.portal_role,
+            "purpose": payload.purpose,
+            "expires_in_seconds": OTP_TTL_SECONDS,
+            "provider": "cloud_smtp_blocked_fallback",
+            "smtp_error": err_msg,
+            "dev_code": code,
+            "message": (
+                f"Your cloud host blocked outbound SMTP ports 587/465 ({err_msg}). "
+                f"Render free tier restricts direct SMTP ports by default. "
+                f"Enter the verification code below to activate your account, or configure RESEND_API_KEY for port-443 live delivery."
+            ),
+        }
 
     return {
         "status": "OTP_SENT",

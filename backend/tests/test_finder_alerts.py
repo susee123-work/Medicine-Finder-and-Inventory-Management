@@ -42,6 +42,12 @@ def test_confirmation_request_workflow(client):
     assert status_resp.status_code == 200
     assert status_resp.json()["status"] == "pending"
 
+    # Check patient's own request list
+    my_resp = client.get("/finder/my-requests?contact=+919876543210")
+    assert my_resp.status_code == 200
+    assert len(my_resp.json()) >= 1
+    assert any(r["id"] == req_id for r in my_resp.json())
+
     # Pharmacy responds
     patch_resp = client.patch(f"/finder/pharmacy-requests/{req_id}", json={
         "status": "available",

@@ -95,7 +95,8 @@ export const api = {
     },
     confirm: (data) => request('/finder/confirm', { method: 'POST', body: JSON.stringify(data) }),
     checkStatus: (requestId) => request(`/finder/confirm/${requestId}`),
-    pharmacyRequests: (pharmacyId) => request(`/finder/pharmacy-requests?pharmacy_id=${pharmacyId}`),
+    myRequests: (contact) => request(`/finder/my-requests${contact ? `?contact=${encodeURIComponent(contact)}` : ''}`),
+    pharmacyRequests: (pharmacyId) => request(`/finder/pharmacy-requests${pharmacyId ? `?pharmacy_id=${encodeURIComponent(pharmacyId)}` : ''}`),
     respondRequest: (requestId, data) => request(`/finder/pharmacy-requests/${requestId}`, { method: 'PATCH', body: JSON.stringify(data) })
   },
 
